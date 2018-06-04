@@ -206,6 +206,79 @@ architecture action_regexp of action_regexp is
 
   signal regexp_space_r : std_logic;
   signal regexp_space_w : std_logic;
+  
+  component arrow_regexp is
+	generic (
+	-- Host bus properties
+	BUS_ADDR_WIDTH : natural := 64;
+	BUS_DATA_WIDTH : natural := 512;
+
+	-- MMIO bus properties
+	SLV_BUS_ADDR_WIDTH : natural := 32;
+	SLV_BUS_DATA_WIDTH : natural := 32;
+
+	REG_WIDTH : natural := 32
+
+	-- (Generic defaults are set for SystemVerilog compatibility)
+	);
+
+	port (
+	clk     : in std_logic;
+	reset_n : in std_logic;
+
+	---------------------------------------------------------------------------
+	-- AXI4 master
+	--
+	-- To be connected to the DDR controllers (through CL_DMA_PCIS_SLV)
+	---------------------------------------------------------------------------
+	-- Read address channel
+	m_axi_araddr  : out std_logic_vector(BUS_ADDR_WIDTH-1 downto 0);
+	m_axi_arlen   : out std_logic_vector(7 downto 0);
+	m_axi_arvalid : out std_logic;
+	m_axi_arready : in  std_logic;
+	m_axi_arsize  : out std_logic_vector(2 downto 0);
+
+	-- Read data channel
+	m_axi_rdata  : in  std_logic_vector(BUS_DATA_WIDTH-1 downto 0);
+	m_axi_rresp  : in  std_logic_vector(1 downto 0);
+	m_axi_rlast  : in  std_logic;
+	m_axi_rvalid : in  std_logic;
+	m_axi_rready : out std_logic;
+
+	---------------------------------------------------------------------------
+	-- AXI4-lite slave
+	--
+	-- To be connected to "sh_cl_sda" a.k.a. "AppPF Bar 1"
+	---------------------------------------------------------------------------
+	-- Write adress
+	s_axi_awvalid : in  std_logic;
+	s_axi_awready : out std_logic;
+	s_axi_awaddr  : in  std_logic_vector(SLV_BUS_ADDR_WIDTH-1 downto 0);
+
+	-- Write data
+	s_axi_wvalid : in  std_logic;
+	s_axi_wready : out std_logic;
+	s_axi_wdata  : in  std_logic_vector(SLV_BUS_DATA_WIDTH-1 downto 0);
+	s_axi_wstrb  : in  std_logic_vector((SLV_BUS_DATA_WIDTH/8)-1 downto 0);
+
+	-- Write response
+	s_axi_bvalid : out std_logic;
+	s_axi_bready : in  std_logic;
+	s_axi_bresp  : out std_logic_vector(1 downto 0);
+
+	-- Read address
+	s_axi_arvalid : in  std_logic;
+	s_axi_arready : out std_logic;
+	s_axi_araddr  : in  std_logic_vector(SLV_BUS_ADDR_WIDTH-1 downto 0);
+
+	-- Read data
+	s_axi_rvalid : out std_logic;
+	s_axi_rready : in  std_logic;
+	s_axi_rdata  : out std_logic_vector(SLV_BUS_DATA_WIDTH-1 downto 0);
+	s_axi_rresp  : out std_logic_vector(1 downto 0)
+	);
+	end component;
+
 begin
 
   ----------------------------------------------------------------------
