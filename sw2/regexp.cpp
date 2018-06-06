@@ -101,7 +101,7 @@ int main(int argc, char ** argv)
 {
         srand(0);
 
-        uint32_t num_rows = 1024;
+        uint32_t num_rows = 1;
 
         flush(cout);
 

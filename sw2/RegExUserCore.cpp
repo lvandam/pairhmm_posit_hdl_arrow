@@ -19,82 +19,68 @@
 using namespace fletcher;
 
 RegExUserCore::RegExUserCore(std::shared_ptr<fletcher::FPGAPlatform> platform)
-    : UserCore(platform)
+        : UserCore(platform)
 {
-  // Some settings that are different from standard implementation
-  // concerning start, reset and status register.
-  ctrl_start       = 0x0000000000000001;// 0x00000000000000FF;
-  ctrl_reset       = 0x0000000000000002;// 0x000000000000FF00;
-  done_status      = 0x0000000000000002;// 0x000000000000FF00;
-  done_status_mask = 0x0000000000000003;// 0x000000000000FFFF;
+        // Some settings that are different from standard implementation
+        // concerning start, reset and status register.
+        ctrl_start       = 0x0000000000000001;// 0x00000000000000FF;
+        ctrl_reset       = 0x0000000000000002;// 0x000000000000FF00;
+        done_status      = 0x0000000000000002;// 0x000000000000FF00;
+        done_status_mask = 0x0000000000000003;// 0x000000000000FFFF;
 }
 
 std::vector<fr_t> RegExUserCore::generate_unit_arguments(uint32_t first_index,
                                                          uint32_t last_index)
 {
-  /*
-   * Generate arguments for the regular expression matching units.
-   * Because the arguments for each REM unit are two 32-bit integers,
-   * but the register model for UserCores is 64-bit, we need to
-   * determine each 64-bit register value.
-   */
+        /*
+         * Generate arguments for the regular expression matching units.
+         * Because the arguments for each REM unit are two 32-bit integers,
+         * but the register model for UserCores is 64-bit, we need to
+         * determine each 64-bit register value.
+         */
 
-  if (first_index >= last_index) {
-    throw std::runtime_error("First index cannot be larger than "
-                             "or equal to last index.");
-  }
+        if (first_index >= last_index) {
+                throw std::runtime_error("First index cannot be larger than "
+                                         "or equal to last index.");
+        }
+        // Generate one argument vector
+        // Every unit needs two 32 bit argument, which is one 64-bit argument
+        std::vector<fr_t> arguments(1);
 
-  // Obtain first and last indices
-  std::vector<uint32_t> first_vec;
-  std::vector<uint32_t> last_vec;
-  uint32_t match_rows = last_index - first_index;
-    // First and last index for unit i
-    uint32_t first = first_index;
-    uint32_t last = first + match_rows;
-    first_vec.push_back(first);
-    last_vec.push_back(last);
-  // Generate one argument vector
-  // Every unit needs two 32 bit argument, which is one 64-bit argument
-  std::vector<fr_t> arguments(1);
-  // Every unit needs one 64-bit argument, but we set two arguments per
-  // iteration
-    reg_conv_t conv;
-    // First indices
-    conv.half.hi = first_vec[0];
-    conv.half.lo = first_vec[1];
-    arguments[0] = conv.full;
-    // Last indices
-    conv.half.hi = last_vec[0];
-    conv.half.lo = last_vec[1];
-    arguments[1] = conv.full;
-  return arguments;
+        reg_conv_t conv;
+        // First indices
+        conv.half.hi = first_index;
+        conv.half.lo = last_index;
+        arguments[0] = conv.full;
+
+        return arguments;
 }
 
 void RegExUserCore::set_arguments(uint32_t first_index, uint32_t last_index)
 {
-  std::vector<fr_t> arguments = this->generate_unit_arguments(first_index, last_index);
-  UserCore::set_arguments(arguments);
+        std::vector<fr_t> arguments = this->generate_unit_arguments(first_index, last_index);
+        UserCore::set_arguments(arguments);
 }
 
 void RegExUserCore::get_matches(std::vector<uint32_t>& matches)
 {
-  int np = matches.size();
+        int np = matches.size();
 
-    reg_conv_t conv;
-    this->platform()->read_mmio(REUC_RESULT_OFFSET, &conv.full);
-    matches[0] += conv.half.hi;
-    matches[1] += conv.half.lo;
+        reg_conv_t conv;
+        this->platform()->read_mmio(REUC_RESULT_OFFSET, &conv.full);
+        matches[0] += conv.half.hi;
+        matches[1] += conv.half.lo;
 }
 
 void RegExUserCore::control_zero()
 {
-    this->platform()->write_mmio(REUC_CONTROL_OFFSET, 0x00000000);
+        this->platform()->write_mmio(REUC_CONTROL_OFFSET, 0x00000000);
 }
 
 void RegExUserCore::get_result(uint32_t& result)
 {
-    reg_conv_t conv;
-    this->platform()->read_mmio(REUC_RESULT_OFFSET, &conv.full);
-    result = conv.half.lo;
-    // matches[1] += conv.half.lo;
+        reg_conv_t conv;
+        this->platform()->read_mmio(REUC_RESULT_OFFSET, &conv.full);
+        result = conv.half.lo;
+        // matches[1] += conv.half.lo;
 }

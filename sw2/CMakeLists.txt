@@ -5,7 +5,7 @@ project(regexp)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
-set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG=1")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 add_executable(regexp
@@ -65,6 +65,7 @@ endif()
 option(ENABLE_DEBUG "Enable debugging" ON)
 
 if (ENABLE_DEBUG)
+    message(STATUS "DEBUG ON")
   target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG)
 endif()
 
