@@ -92,6 +92,7 @@ int main()
 
         printf("Offsets buffer=%016lX\n", off.full);
         printf("Haplos buffer=%016lX\n", val.full);
+        printf("Haplos lo=%08X\n", val.half.lo);
 
         snap_mmio_write32(dn, CONTROL_REG_LO, CONTROL_RESET);
 
