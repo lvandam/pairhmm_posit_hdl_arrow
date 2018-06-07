@@ -95,13 +95,11 @@ shared_ptr<arrow::Table> create_table(const string& string)
 }
 
 /**
- * Main function for the regular expression matching example
+ * Main function for pair HMM accelerator
  */
 int main(int argc, char ** argv)
 {
         srand(0);
-
-        uint32_t num_rows = 1;
 
         flush(cout);
 
@@ -112,12 +110,10 @@ int main(int argc, char ** argv)
         uint32_t fpga_result;
 
         uint32_t first_index = 0;
-        uint32_t last_index = num_rows;
+        uint32_t last_index = 1;
 
-        PRINT_INT(num_rows);
-
-        // Make a table with random strings containing some other string effectively serializing the data
-        shared_ptr<arrow::Table> table = create_table("actg");
+        // Make a table with haplotypes
+        shared_ptr<arrow::Table> table = create_table("ACTGGTCA");
 
         // Match on FPGA
         // Create a platform

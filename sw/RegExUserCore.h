@@ -21,7 +21,7 @@
 
 #define REUC_TOTAL_UNITS   1
 
-#define REUC_RESULT_OFFSET 12
+#define REUC_RESULT_OFFSET 6
 #define REUC_CONTROL_OFFSET  1
 
 /**

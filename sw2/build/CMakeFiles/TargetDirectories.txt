@@ -1,3 +1,0 @@
-/home/laurens/open-power-snap/actions/pairhmm/sw2/build/CMakeFiles/edit_cache.dir
-/home/laurens/open-power-snap/actions/pairhmm/sw2/build/CMakeFiles/rebuild_cache.dir
-/home/laurens/open-power-snap/actions/pairhmm/sw2/build/CMakeFiles/regexp.dir

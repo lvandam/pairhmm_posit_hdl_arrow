@@ -1,1 +1,0 @@
-/usr/bin/c++  -Wall -Wextra -fopenmp    CMakeFiles/regexp.dir/regexp.cpp.o CMakeFiles/regexp.dir/RegExUserCore.cpp.o  -o regexp  -L/home/laurens/snapp/software/lib -Wl,-rpath,/usr/local/lib:/home/laurens/snapp/software/lib /usr/local/lib/libfletcher.so /usr/local/lib/libarrow.so /usr/lib/x86_64-linux-gnu/libre2.so -lsnap 
