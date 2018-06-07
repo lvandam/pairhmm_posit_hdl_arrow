@@ -82,5 +82,4 @@ void RegExUserCore::get_result(uint32_t& result)
         reg_conv_t conv;
         this->platform()->read_mmio(REUC_RESULT_OFFSET, &conv.full);
         result = conv.half.lo;
-        // matches[1] += conv.half.lo;
 }

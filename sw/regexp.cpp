@@ -68,30 +68,106 @@
 #define PRINT_INT(X) cout << dec << X << ", " << flush
 #define PRINT_HEX(X) cout << hex << X << dec << endl << flush
 
+typedef unsigned __int128 uint128_t;
 
 using namespace std;
+
+union ReadProb
+{
+        float f;
+        uint8_t b[4];
+};
+
+#define PROBABILITIES 8
+#define PROBS_BYTES (PROBABILITIES * 4)
 
 /**
  * Create an Arrow table containing one column of random bases.
  */
-shared_ptr<arrow::Table> create_table(const string& string)
+shared_ptr<arrow::Table> create_table_hapl(const string& hapl_string)
 {
-        arrow::StringBuilder str_builder(arrow::default_memory_pool());
+        //
+        // listprim(8)
+        //
+        arrow::MemoryPool* pool = arrow::default_memory_pool();
 
-        str_builder.Append(string);
+        arrow::StringBuilder hapl_str_builder(pool);
+        hapl_str_builder.Append(hapl_string);
 
         // Define the schema
-        auto column_field = arrow::field("haplos", arrow::utf8(), false);
-        vector<shared_ptr<arrow::Field> > fields = { column_field };
+        auto haplo_field = arrow::field("haplos", arrow::utf8(), false);
+        vector<shared_ptr<arrow::Field> > fields = { haplo_field };
 
         shared_ptr<arrow::Schema> schema = make_shared<arrow::Schema>(fields);
 
         // Create an array and finish the builder
-        shared_ptr<arrow::Array> str_array;
-        str_builder.Finish(&str_array);
+        shared_ptr<arrow::Array> hapl_array;
+        hapl_str_builder.Finish(&hapl_array);
 
         // Create and return the table
-        return move(arrow::Table::Make(schema, { str_array }));
+        return move(arrow::Table::Make(schema, { hapl_array }));
+}
+
+shared_ptr<arrow::Table> create_table_reads() {
+        //
+        // list(struct(prim(8),prim(256)))
+        //
+        arrow::MemoryPool* pool = arrow::default_memory_pool();
+
+        arrow::UInt8Builder read_builder(pool);
+
+        auto probs_type = arrow::fixed_size_binary(32); // 8 * 32 bit probabilities = 32 bytes
+        arrow::FixedSizeBinaryBuilder probs_builder(probs_type, pool);
+
+        // For every read...
+        for(int i = 0; i < 1; i++) {//for (const data_row& row : rows) {
+                // Append read
+                read_builder.Append('A');
+
+                // Pack probabilities & append for this read
+                ReadProb eta, zeta, epsilon, delta, beta, alpha, distm_diff, distm_simi;
+
+                eta.f = 0.5;
+                zeta.f = 0.25;
+                epsilon.f = 0.5;
+                delta.f = 0.25;
+                beta.f = 0.5;
+                alpha.f = 0.25;
+                distm_diff.f = 0.5;
+                distm_simi.f = 0.25;
+
+                std::vector<ReadProb> probs(PROBABILITIES);
+                probs.push_back(eta);
+                probs.push_back(zeta);
+                probs.push_back(epsilon);
+                probs.push_back(delta);
+                probs.push_back(beta);
+                probs.push_back(alpha);
+                probs.push_back(distm_diff);
+                probs.push_back(distm_simi);
+
+                uint8_t probs_bytes[PROBS_BYTES];
+                void * p = probs_bytes;
+                memcpy(p, &probs, sizeof(probs));
+
+                probs_builder.Append(probs_bytes);
+        }
+
+        std::shared_ptr<arrow::Array> read_array;
+        read_builder.Finish(&read_array);
+
+        std::shared_ptr<arrow::Array> probs_array;
+        probs_builder.Finish(&probs_array);
+
+        std::vector<std::shared_ptr<arrow::Field> > schema_vector = {
+                arrow::field("read", arrow::uint8()),
+                arrow::field("probs", arrow::fixed_size_binary(32))
+        };
+
+        auto schema_reads = std::make_shared<arrow::Schema>(schema_vector);
+        std::shared_ptr<arrow::Table> table = arrow::Table::Make(schema_reads, {read_array, probs_array});
+
+        return move(table);
 }
 
 /**
@@ -113,7 +189,9 @@ int main(int argc, char ** argv)
         uint32_t last_index = 1;
 
         // Make a table with haplotypes
-        shared_ptr<arrow::Table> table = create_table("ACTGGTCA");
+        shared_ptr<arrow::Table> table_hapl = create_table_hapl("ACTGGTCA");
+        // Make a table with reads
+        shared_ptr<arrow::Table> table_reads = create_table_reads();
 
         // Match on FPGA
         // Create a platform
@@ -126,7 +204,9 @@ int main(int argc, char ** argv)
 #endif
 
         // Prepare the colummn buffers
-        bytes_copied = platform->prepare_column_chunks(table->column(0));
+        bytes_copied = platform->prepare_column_chunks(table_hapl->column(0));
+        platform->prepare_column_chunks(table_reads->column(0));
+        platform->prepare_column_chunks(table_reads->column(1));
 
         // Create a UserCore
         RegExUserCore uc(static_pointer_cast<fletcher::FPGAPlatform>(platform));
