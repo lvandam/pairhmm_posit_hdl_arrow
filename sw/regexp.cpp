@@ -95,10 +95,13 @@ shared_ptr<arrow::Table> create_table_hapl(const string& hapl_string)
         hapl_str_builder.Append(hapl_string);
 
         // Define the schema
-        auto haplo_field = arrow::field("haplos", arrow::utf8(), false);
-        vector<shared_ptr<arrow::Field> > fields = { haplo_field };
+        vector<shared_ptr<arrow::Field> > schema_fields = { arrow::field("haplotype", arrow::binary(), false) };
 
-        shared_ptr<arrow::Schema> schema = make_shared<arrow::Schema>(fields);
+        const std::vector<std::string> keys = {"fletcher_mode"};
+        const std::vector<std::string> values = {"read"};
+        auto schema_meta = std::make_shared<arrow::KeyValueMetadata>(keys, values);
+
+        auto schema = std::make_shared<arrow::Schema>(schema_fields, schema_meta);
 
         // Create an array and finish the builder
         shared_ptr<arrow::Array> hapl_array;
@@ -108,64 +111,91 @@ shared_ptr<arrow::Table> create_table_hapl(const string& hapl_string)
         return move(arrow::Table::Make(schema, { hapl_array }));
 }
 
-shared_ptr<arrow::Table> create_table_reads() {
+shared_ptr<arrow::Table> create_table_reads(const std::vector<uint8_t>& reads) {
         //
         // list(struct(prim(8),prim(256)))
         //
         arrow::MemoryPool* pool = arrow::default_memory_pool();
 
-        arrow::UInt8Builder read_builder(pool);
+        std::vector<std::shared_ptr<arrow::Field> > schema_fields = {
+                arrow::field("read",
+                             arrow::list(
+                                     arrow::field("item",
+                                                  arrow::struct_({arrow::field("basepairs", arrow::uint8(), false),
+                                                                  arrow::field("probabilities",
+                                                                               arrow::fixed_size_binary(32),
+                                                                               false)}),
+                                                  false)), false)};
 
-        auto probs_type = arrow::fixed_size_binary(32); // 8 * 32 bit probabilities = 32 bytes
-        arrow::FixedSizeBinaryBuilder probs_builder(probs_type, pool);
+        const std::vector<std::string> keys = {"fletcher_mode"};
+        const std::vector<std::string> values = {"read"};
+        auto schema_meta = std::make_shared<arrow::KeyValueMetadata>(keys, values);
+        auto schema = std::make_shared<arrow::Schema>(schema_fields, schema_meta);
 
-        // For every read...
-        for(int i = 0; i < 1; i++) {//for (const data_row& row : rows) {
-                // Append read
-                read_builder.Append('A');
+        // Build item struct
+        std::vector<std::shared_ptr<arrow::Field> > fields;
+        fields.push_back(arrow::field("basepairs", arrow::uint8(), false));
+        fields.push_back(arrow::field("probabilities", arrow::fixed_size_binary(32), false));
 
-                // Pack probabilities & append for this read
-                ReadProb eta, zeta, epsilon, delta, beta, alpha, distm_diff, distm_simi;
+        std::shared_ptr<arrow::DataType> type_ = arrow::struct_(fields);
 
-                eta.f = 0.5;
-                zeta.f = 0.25;
-                epsilon.f = 0.5;
-                delta.f = 0.25;
-                beta.f = 0.5;
-                alpha.f = 0.25;
-                distm_diff.f = 0.5;
-                distm_simi.f = 0.25;
+        std::unique_ptr<arrow::ArrayBuilder> tmp;
+        arrow::MakeBuilder(pool, type_, &tmp);
 
-                std::vector<ReadProb> probs(PROBABILITIES);
-                probs.push_back(eta);
-                probs.push_back(zeta);
-                probs.push_back(epsilon);
-                probs.push_back(delta);
-                probs.push_back(beta);
-                probs.push_back(alpha);
-                probs.push_back(distm_diff);
-                probs.push_back(distm_simi);
+        std::unique_ptr<arrow::StructBuilder> builder_;
+        builder_.reset(static_cast<arrow::StructBuilder*>(tmp.release()));
+
+        arrow::UInt8Builder* read_vb = static_cast<arrow::UInt8Builder*>(builder_->field_builder(0));
+        arrow::FixedSizeBinaryBuilder* probs_vb = static_cast<arrow::FixedSizeBinaryBuilder*>(builder_->field_builder(1));
+
+        // Resize to correct size
+        read_vb->Resize(reads.size());
+        probs_vb->Resize(reads.size());
+
+        for (size_t i = 0; i < reads.size(); ++i) {
+                read_vb->UnsafeAppend(reads[i]);
+
+                // // Pack probabilities & append for this read
+                // ReadProb eta, zeta, epsilon, delta, beta, alpha, distm_diff, distm_simi;
+                //
+                // eta.f = 0.5;
+                // zeta.f = 0.25;
+                // epsilon.f = 0.5;
+                // delta.f = 0.25;
+                // beta.f = 0.5;
+                // alpha.f = 0.25;
+                // distm_diff.f = 0.5;
+                // distm_simi.f = 0.25;
+                //
+                // std::vector<ReadProb> probs(PROBABILITIES);
+                // probs.push_back(eta);
+                // probs.push_back(zeta);
+                // probs.push_back(epsilon);
+                // probs.push_back(delta);
+                // probs.push_back(beta);
+                // probs.push_back(alpha);
+                // probs.push_back(distm_diff);
+                // probs.push_back(distm_simi);
 
                 uint8_t probs_bytes[PROBS_BYTES];
-                void * p = probs_bytes;
-                memcpy(p, &probs, sizeof(probs));
+                for(int i = 0; i < PROBS_BYTES; i++)
+                    probs_bytes[i] = 5;
+                // void * p = probs_bytes;
+                // memcpy(p, &probs, sizeof(probs));
 
-                probs_builder.Append(probs_bytes);
+                probs_vb->Append(probs_bytes);
         }
 
-        std::shared_ptr<arrow::Array> read_array;
-        read_builder.Finish(&read_array);
+        // Struct valid array
+        for (size_t i = 0; i < reads.size(); ++i) {
+                vector<uint8_t> struct_is_valid = {1};
+                builder_->Append(1);
+        }
 
-        std::shared_ptr<arrow::Array> probs_array;
-        probs_builder.Finish(&probs_array);
+        std::shared_ptr<arrow::Array> item_array;
+        builder_->Finish(&item_array);
 
-        std::vector<std::shared_ptr<arrow::Field> > schema_vector = {
-                arrow::field("read", arrow::uint8()),
-                arrow::field("probs", arrow::fixed_size_binary(32))
-        };
-
-        auto schema_reads = std::make_shared<arrow::Schema>(schema_vector);
-        std::shared_ptr<arrow::Table> table = arrow::Table::Make(schema_reads, {read_array, probs_array});
+        std::shared_ptr<arrow::Table> table = arrow::Table::Make(schema, { item_array });
 
         return move(table);
 }
@@ -179,9 +209,6 @@ int main(int argc, char ** argv)
 
         flush(cout);
 
-        // Aggregators
-        uint64_t bytes_copied = 0;
-
         // Result
         uint32_t fpga_result;
 
@@ -191,7 +218,8 @@ int main(int argc, char ** argv)
         // Make a table with haplotypes
         shared_ptr<arrow::Table> table_hapl = create_table_hapl("ACTGGTCA");
         // Make a table with reads
-        shared_ptr<arrow::Table> table_reads = create_table_reads();
+        std::vector<uint8_t> reads = {'A', 'C', 'T', 'G'};
+        shared_ptr<arrow::Table> table_reads = create_table_reads(reads);
 
         // Match on FPGA
         // Create a platform
@@ -204,9 +232,8 @@ int main(int argc, char ** argv)
 #endif
 
         // Prepare the colummn buffers
-        bytes_copied = platform->prepare_column_chunks(table_hapl->column(0));
+        platform->prepare_column_chunks(table_hapl->column(0));
         platform->prepare_column_chunks(table_reads->column(0));
-        platform->prepare_column_chunks(table_reads->column(1));
 
         // Create a UserCore
         RegExUserCore uc(static_pointer_cast<fletcher::FPGAPlatform>(platform));
@@ -230,8 +257,6 @@ int main(int argc, char ** argv)
         // uc.get_matches(m_fpga[e]);
         // Get the result from FPGA
         uc.get_result(fpga_result);
-
-        PRINT_INT(bytes_copied);
 
         cout << "RESULT: " << hex << fpga_result << endl;
         cout << endl;
