@@ -155,47 +155,47 @@ shared_ptr<arrow::Table> create_table_reads(const std::vector<uint8_t>& reads) {
         for (size_t i = 0; i < reads.size(); ++i) {
                 read_vb->UnsafeAppend(reads[i]);
 
-                // // Pack probabilities & append for this read
-                // ReadProb eta, zeta, epsilon, delta, beta, alpha, distm_diff, distm_simi;
-                //
-                // eta.f = 0.5;
-                // zeta.f = 0.25;
-                // epsilon.f = 0.5;
-                // delta.f = 0.25;
-                // beta.f = 0.5;
-                // alpha.f = 0.25;
-                // distm_diff.f = 0.5;
-                // distm_simi.f = 0.25;
-                //
-                // std::vector<ReadProb> probs(PROBABILITIES);
-                // probs.push_back(eta);
-                // probs.push_back(zeta);
-                // probs.push_back(epsilon);
-                // probs.push_back(delta);
-                // probs.push_back(beta);
-                // probs.push_back(alpha);
-                // probs.push_back(distm_diff);
-                // probs.push_back(distm_simi);
+                // Pack probabilities & append for this read
+                ReadProb eta, zeta, epsilon, delta, beta, alpha, distm_diff, distm_simi;
+
+                eta.f = 0.5;
+                zeta.f = 0.25;
+                epsilon.f = 0.5;
+                delta.f = 0.25;
+                beta.f = 0.5;
+                alpha.f = 0.25;
+                distm_diff.f = 0.5;
+                distm_simi.f = 0.25;
+
+                std::vector<ReadProb> probs(PROBABILITIES);
+                probs.push_back(eta);
+                probs.push_back(zeta);
+                probs.push_back(epsilon);
+                probs.push_back(delta);
+                probs.push_back(beta);
+                probs.push_back(alpha);
+                probs.push_back(distm_diff);
+                probs.push_back(distm_simi);
 
                 uint8_t probs_bytes[PROBS_BYTES];
-                for(int i = 0; i < PROBS_BYTES; i++)
-                    probs_bytes[i] = 5;
-                // void * p = probs_bytes;
-                // memcpy(p, &probs, sizeof(probs));
+                void * p = probs_bytes;
+                memcpy(p, &probs, sizeof(probs));
 
                 probs_vb->Append(probs_bytes);
         }
 
         // Struct valid array
-        // for (size_t i = 0; i < reads.size(); ++i) {
-        //         vector<uint8_t> struct_is_valid = {1};
-        //         builder_->Append(1);
-        // }
+        for (size_t i = 0; i < reads.size(); ++i) {
+                vector<uint8_t> struct_is_valid = {1};
+                builder_->Append(1);
+        }
 
-        std::shared_ptr<arrow::Array> item_array;
-        builder_->Finish(&item_array);
+        arrow::ListBuilder components_builder(pool, std::move(builder_));
 
-        std::shared_ptr<arrow::Table> table = arrow::Table::Make(schema, { item_array });
+        std::shared_ptr<arrow::Array> list_array;
+        components_builder.Finish(&list_array);
+
+        std::shared_ptr<arrow::Table> table = arrow::Table::Make(schema, { list_array });
 
         return move(table);
 }
@@ -233,7 +233,7 @@ int main(int argc, char ** argv)
 
         // Prepare the colummn buffers
         platform->prepare_column_chunks(table_hapl->column(0));
-        // platform->prepare_column_chunks(table_reads->column(0));
+        platform->prepare_column_chunks(table_reads->column(0));
 
         // Create a UserCore
         RegExUserCore uc(static_pointer_cast<fletcher::FPGAPlatform>(platform));
