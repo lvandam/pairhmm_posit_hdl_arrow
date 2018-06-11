@@ -187,10 +187,10 @@ shared_ptr<arrow::Table> create_table_reads(const std::vector<uint8_t>& reads) {
         }
 
         // Struct valid array
-        for (size_t i = 0; i < reads.size(); ++i) {
-                vector<uint8_t> struct_is_valid = {1};
-                builder_->Append(1);
-        }
+        // for (size_t i = 0; i < reads.size(); ++i) {
+        //         vector<uint8_t> struct_is_valid = {1};
+        //         builder_->Append(1);
+        // }
 
         std::shared_ptr<arrow::Array> item_array;
         builder_->Finish(&item_array);
@@ -233,7 +233,7 @@ int main(int argc, char ** argv)
 
         // Prepare the colummn buffers
         platform->prepare_column_chunks(table_hapl->column(0));
-        platform->prepare_column_chunks(table_reads->column(0));
+        // platform->prepare_column_chunks(table_reads->column(0));
 
         // Create a UserCore
         RegExUserCore uc(static_pointer_cast<fletcher::FPGAPlatform>(platform));
@@ -241,11 +241,9 @@ int main(int argc, char ** argv)
         // Reset it
         uc.reset();
 
-        // Run the example
+        // Run
         uc.set_arguments(first_index, last_index);
         uc.start();
-
-        uc.control_zero();
 
 #ifdef DEBUG
         uc.wait_for_finish(1000000);
