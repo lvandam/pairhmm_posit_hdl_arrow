@@ -232,8 +232,8 @@ int main(int argc, char ** argv)
 #endif
 
         // Prepare the colummn buffers
-        platform->prepare_column_chunks(table_hapl->column(0));
-        platform->prepare_column_chunks(table_reads->column(0));
+        platform->prepare_column_chunks(table_hapl->column(0), table_reads->column(0)); // This requires a modification in Fletcher
+        // platform->prepare_column_chunks(table_reads->column(0));
 
         // Create a UserCore
         RegExUserCore uc(static_pointer_cast<fletcher::FPGAPlatform>(platform));
