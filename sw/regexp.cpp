@@ -155,48 +155,68 @@ shared_ptr<arrow::Table> create_table_reads(const std::vector<uint8_t>& reads) {
         for (size_t i = 0; i < reads.size(); ++i) {
                 read_vb->UnsafeAppend(reads[i]);
 
-                // Pack probabilities & append for this read
-                ReadProb eta, zeta, epsilon, delta, beta, alpha, distm_diff, distm_simi;
-
-                eta.f = 0.5;
-                zeta.f = 0.25;
-                epsilon.f = 0.5;
-                delta.f = 0.25;
-                beta.f = 0.5;
-                alpha.f = 0.25;
-                distm_diff.f = 0.5;
-                distm_simi.f = 0.25;
-
-                std::vector<ReadProb> probs(PROBABILITIES);
-                probs.push_back(eta);
-                probs.push_back(zeta);
-                probs.push_back(epsilon);
-                probs.push_back(delta);
-                probs.push_back(beta);
-                probs.push_back(alpha);
-                probs.push_back(distm_diff);
-                probs.push_back(distm_simi);
+                // // Pack probabilities & append for this read
+                // float eta, zeta, epsilon, delta, beta, alpha, distm_diff, distm_simi;
+                //
+                // eta = 0.5;
+                // zeta = 0.25;
+                // epsilon = 0.5;
+                // delta = 0.25;
+                // beta = 0.5;
+                // alpha = 0.25;
+                // distm_diff = 0.5;
+                // distm_simi = 0.25;
+                //
+                // std::vector<float> probs(PROBABILITIES);
+                // probs.push_back(eta);
+                // probs.push_back(zeta);
+                // probs.push_back(epsilon);
+                // probs.push_back(delta);
+                // probs.push_back(beta);
+                // probs.push_back(alpha);
+                // probs.push_back(distm_diff);
+                // probs.push_back(distm_simi);
 
                 uint8_t probs_bytes[PROBS_BYTES];
-                void * p = probs_bytes;
-                memcpy(p, &probs, sizeof(probs));
+                for(int i = 0; i < PROBS_BYTES/4; i++) {
+                    probs_bytes[i*4+0] = 0x01;
+                    probs_bytes[i*4+1] = 0x02;
+                    probs_bytes[i*4+2] = 0x03;
+                    probs_bytes[i*4+3] = 0x04;
+                }
+                // void * p = probs_bytes;
+                // memcpy(p, &probs, sizeof(probs));
 
                 probs_vb->Append(probs_bytes);
         }
 
         // Struct valid array
         for (size_t i = 0; i < reads.size(); ++i) {
-                vector<uint8_t> struct_is_valid = {1};
                 builder_->Append(1);
         }
 
         arrow::ListBuilder components_builder(pool, std::move(builder_));
-        components_builder.Append();
+
+        for (size_t i = 0; i < reads.size(); ++i) {
+            components_builder.Append();
+        }
 
         std::shared_ptr<arrow::Array> list_array;
         components_builder.Finish(&list_array);
 
         std::shared_ptr<arrow::Table> table = arrow::Table::Make(schema, { list_array });
+
+        cout << "ROWS: " << table->num_rows() << endl;
+        cout << "COLS: " << table->num_columns() << endl;
+
+        cout << "COL 0 name: " << table->column(0)->name() << endl;
+        cout << "COL 0 length: " << table->column(0)->length() << endl;
+
+        cout << "COL 0, Child 0: " << table->column(0)->field()->type()->child(0)->type()->ToString() <<", num children " << table->column(0)->field()->type()->child(0)->type()->num_children() << endl;
+        for(int i = 0; i < table->column(0)->field()->type()->child(0)->type()->num_children(); i++)
+        {
+            cout << "COL 0, Child 0, Child "<<i<<": " << table->column(0)->field()->type()->child(0)->type()->child(i)->type()->ToString() <<", num children " << table->column(0)->field()->type()->child(0)->type()->child(i)->type()->num_children() << endl;
+        }
 
         return move(table);
 }
@@ -219,7 +239,7 @@ int main(int argc, char ** argv)
         // Make a table with haplotypes
         shared_ptr<arrow::Table> table_hapl = create_table_hapl("ACTGGTCA");
         // Make a table with reads
-        std::vector<uint8_t> reads = {'A', 'C', 'T', 'G'};
+        std::vector<uint8_t> reads = {'A', 'C', 'T', 'G', 'G', 'T', 'C', 'A'};
         shared_ptr<arrow::Table> table_reads = create_table_reads(reads);
 
         // Match on FPGA
