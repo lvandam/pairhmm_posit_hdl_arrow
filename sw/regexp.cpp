@@ -191,6 +191,7 @@ shared_ptr<arrow::Table> create_table_reads(const std::vector<uint8_t>& reads) {
         }
 
         arrow::ListBuilder components_builder(pool, std::move(builder_));
+        components_builder.Append();
 
         std::shared_ptr<arrow::Array> list_array;
         components_builder.Finish(&list_array);
