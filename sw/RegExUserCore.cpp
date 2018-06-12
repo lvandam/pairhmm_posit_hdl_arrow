@@ -29,11 +29,11 @@ RegExUserCore::RegExUserCore(std::shared_ptr<fletcher::FPGAPlatform> platform)
         done_status_mask = 0x0000000000000003;// 0x000000000000FFFF;
 }
 
-std::vector<fr_t> RegExUserCore::generate_unit_arguments(uint32_t first_index,
+fr_t RegExUserCore::generate_unit_arguments(uint32_t first_index,
                                                          uint32_t last_index)
 {
         /*
-         * Generate arguments for the regular expression matching units.
+         * Generate arguments for the haplotype ColumnReader
          * Because the arguments for each REM unit are two 32-bit integers,
          * but the register model for UserCores is 64-bit, we need to
          * determine each 64-bit register value.
@@ -43,22 +43,22 @@ std::vector<fr_t> RegExUserCore::generate_unit_arguments(uint32_t first_index,
                 throw std::runtime_error("First index cannot be larger than "
                                          "or equal to last index.");
         }
-        // Generate one argument vector
+        
         // Every unit needs two 32 bit argument, which is one 64-bit argument
-        std::vector<fr_t> arguments(1);
-
         reg_conv_t conv;
         // First indices
         conv.half.hi = first_index;
         conv.half.lo = last_index;
-        arguments[0] = conv.full;
 
-        return arguments;
+        return conv.full;
 }
 
 void RegExUserCore::set_arguments(uint32_t first_index, uint32_t last_index)
 {
-        std::vector<fr_t> arguments = this->generate_unit_arguments(first_index, last_index);
+        std::vector<fr_t> arguments;
+        arguments.push_back(this->generate_unit_arguments(first_index, last_index)); // Haplotype first & last idx
+        arguments.push_back(this->generate_unit_arguments(first_index, last_index)); // Read first & last idx
+
         UserCore::set_arguments(arguments);
 }
 

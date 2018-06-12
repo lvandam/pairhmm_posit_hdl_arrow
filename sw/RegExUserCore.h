@@ -21,7 +21,7 @@
 
 #define REUC_TOTAL_UNITS   1
 
-#define REUC_RESULT_OFFSET 8
+#define REUC_RESULT_OFFSET 10
 #define REUC_CONTROL_OFFSET  1
 
 /**
@@ -61,7 +61,7 @@ class RegExUserCore : public fletcher::UserCore
   /**
    * \brief Generate arguments for each of the RegEx units.
    */
-  std::vector<fletcher::fr_t> generate_unit_arguments(uint32_t last_index,
+  fletcher::fr_t generate_unit_arguments(uint32_t last_index,
                                                       uint32_t first_index);
 
 };
