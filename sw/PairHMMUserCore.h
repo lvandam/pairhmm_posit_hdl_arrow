@@ -25,17 +25,17 @@
 #define REUC_CONTROL_OFFSET  1
 
 /**
- * \class RegExUserCore
+ * \class PairHMMUserCore
  *
  * A class to provide interaction with the regular expression matching UserCore example.
  */
-class RegExUserCore : public fletcher::UserCore
+class PairHMMUserCore : public fletcher::UserCore
 {
  public:
   /**
-   * \param platform  The platform to run the RegExUserCore on.
+   * \param platform  The platform to run the PairHMMUserCore on.
    */
-  RegExUserCore(std::shared_ptr<fletcher::FPGAPlatform> platform);
+  PairHMMUserCore(std::shared_ptr<fletcher::FPGAPlatform> platform);
 
   /**
    * \brief Set arguments for the RegEx units based on first and last index
@@ -47,7 +47,7 @@ class RegExUserCore : public fletcher::UserCore
   void set_arguments(uint32_t first_index, uint32_t last_index);
 
   /**
-   * \brief Get the number of matches from the RegEx units.
+   * \brief Get the number of matches from the units.
    */
   void get_matches(std::vector<uint32_t>& matches);
 
@@ -59,7 +59,7 @@ class RegExUserCore : public fletcher::UserCore
     void get_result(uint32_t& result);
  private:
   /**
-   * \brief Generate arguments for each of the RegEx units.
+   * \brief Generate arguments for each of the units.
    */
   fletcher::fr_t generate_unit_arguments(uint32_t last_index,
                                                       uint32_t first_index);

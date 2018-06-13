@@ -14,11 +14,11 @@
 
 #include <stdexcept>
 
-#include "RegExUserCore.h"
+#include "PairHMMUserCore.h"
 
 using namespace fletcher;
 
-RegExUserCore::RegExUserCore(std::shared_ptr<fletcher::FPGAPlatform> platform)
+PairHMMUserCore::PairHMMUserCore(std::shared_ptr<fletcher::FPGAPlatform> platform)
         : UserCore(platform)
 {
         // Some settings that are different from standard implementation
@@ -29,7 +29,7 @@ RegExUserCore::RegExUserCore(std::shared_ptr<fletcher::FPGAPlatform> platform)
         done_status_mask = 0x0000000000000003;// 0x000000000000FFFF;
 }
 
-fr_t RegExUserCore::generate_unit_arguments(uint32_t first_index,
+fr_t PairHMMUserCore::generate_unit_arguments(uint32_t first_index,
                                                          uint32_t last_index)
 {
         /*
@@ -43,7 +43,7 @@ fr_t RegExUserCore::generate_unit_arguments(uint32_t first_index,
                 throw std::runtime_error("First index cannot be larger than "
                                          "or equal to last index.");
         }
-        
+
         // Every unit needs two 32 bit argument, which is one 64-bit argument
         reg_conv_t conv;
         // First indices
@@ -53,7 +53,7 @@ fr_t RegExUserCore::generate_unit_arguments(uint32_t first_index,
         return conv.full;
 }
 
-void RegExUserCore::set_arguments(uint32_t first_index, uint32_t last_index)
+void PairHMMUserCore::set_arguments(uint32_t first_index, uint32_t last_index)
 {
         std::vector<fr_t> arguments;
         arguments.push_back(this->generate_unit_arguments(first_index, last_index)); // Haplotype first & last idx
@@ -62,7 +62,7 @@ void RegExUserCore::set_arguments(uint32_t first_index, uint32_t last_index)
         UserCore::set_arguments(arguments);
 }
 
-void RegExUserCore::get_matches(std::vector<uint32_t>& matches)
+void PairHMMUserCore::get_matches(std::vector<uint32_t>& matches)
 {
         int np = matches.size();
 
@@ -72,12 +72,12 @@ void RegExUserCore::get_matches(std::vector<uint32_t>& matches)
         matches[1] += conv.half.lo;
 }
 
-void RegExUserCore::control_zero()
+void PairHMMUserCore::control_zero()
 {
         this->platform()->write_mmio(REUC_CONTROL_OFFSET, 0x00000000);
 }
 
-void RegExUserCore::get_result(uint32_t& result)
+void PairHMMUserCore::get_result(uint32_t& result)
 {
         reg_conv_t conv;
         this->platform()->read_mmio(REUC_RESULT_OFFSET, &conv.full);
