@@ -26,9 +26,9 @@ use ieee.numeric_std.all;
 
 library work;
 use work.Utils.all;
-use work.arrow_regexp_pkg.all;
+use work.arrow_pairhmm_pkg.all;
 
-entity action_regexp is
+entity action_pairhmm is
   generic (
     -- Parameters of Axi Master Bus Interface AXI_CARD_MEM0 ; to DDR memory
     C_AXI_CARD_MEM0_ID_WIDTH     : integer := 2;
@@ -133,11 +133,11 @@ entity action_regexp is
     axi_host_mem_ruser    : in  std_logic_vector(C_AXI_HOST_MEM_RUSER_WIDTH-1 downto 0);
     axi_host_mem_wuser    : out std_logic_vector(C_AXI_HOST_MEM_WUSER_WIDTH-1 downto 0)
     );
-end action_regexp;
+end action_pairhmm;
 
 
 
-architecture action_regexp of action_regexp is
+architecture action_pairhmm of action_pairhmm is
   -----------------------------------
   -- SNAP registers
   -----------------------------------
@@ -207,7 +207,7 @@ architecture action_regexp of action_regexp is
   signal regexp_space_r : std_logic;
   signal regexp_space_w : std_logic;
 
-  component arrow_regexp is
+  component arrow_pairhmm is
 	generic (
 	-- Host bus properties
 	BUS_ADDR_WIDTH : natural := 64;
@@ -429,9 +429,9 @@ begin
   axi_host_mem_aruser  <= (others => '0');
 
   ----------------------------------------------------------------------
-  -- RegExp instance
+  -- Arrow Pair-HMM instance
   ----------------------------------------------------------------------
-  arrow_regexp_inst : arrow_regexp
+  arrow_pairhmm_inst : arrow_pairhmm
     generic map (
       BUS_ADDR_WIDTH     => C_AXI_HOST_MEM_ADDR_WIDTH,
       BUS_DATA_WIDTH     => C_AXI_HOST_MEM_DATA_WIDTH,
@@ -495,4 +495,4 @@ begin
       s_axi_rresp  => regexp_s_axi_rresp
       );
 
-end action_regexp;
+end action_pairhmm;
