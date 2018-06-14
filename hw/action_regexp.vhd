@@ -46,7 +46,7 @@ entity action_regexp is
 
     -- Parameters of Axi Master Bus Interface AXI_HOST_MEM ; to Host memory
     C_AXI_HOST_MEM_ID_WIDTH     : integer := 2;
-    C_AXI_HOST_MEM_ADDR_WIDTH   : integer := 64;
+    C_AXI_HOST_MEM_ADDR_WIDTH   : integer := 96;--64
     C_AXI_HOST_MEM_DATA_WIDTH   : integer := 512;
     C_AXI_HOST_MEM_AWUSER_WIDTH : integer := 1;
     C_AXI_HOST_MEM_ARUSER_WIDTH : integer := 1;
@@ -206,7 +206,7 @@ architecture action_regexp of action_regexp is
 
   signal regexp_space_r : std_logic;
   signal regexp_space_w : std_logic;
-  
+
   component arrow_regexp is
 	generic (
 	-- Host bus properties

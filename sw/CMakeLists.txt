@@ -1,21 +1,20 @@
 cmake_minimum_required(VERSION 3.5.1)
 
-project(regexp)
+project(pairhmm)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -g")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG=1")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
-add_executable(regexp
-	regexp.cpp
-	RegExUserCore.cpp
+add_executable(pairhmm
+	pairhmm.cpp
+	PairHMMUserCore.cpp
 )
 
 find_library(LIB_FLETCHER fletcher)
 find_library(LIB_ARROW arrow)
-find_library(LIB_RE2 re2)
 
 find_package(OpenMP REQUIRED)
 if (OPENMP_FOUND)
@@ -24,7 +23,7 @@ if (OPENMP_FOUND)
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 
-option(ACTIVE_UNITS "Number of active RegEx units in the FPGA implementation" 16)
+option(ACTIVE_UNITS "Number of active Pair-HMM units in the FPGA implementation" 16)
 option(RUNTIME_PLATFORM "The run-time platform to use. Currently 0: ECHO, 1: AWS EC2 F1, 2: CAPI SNAP" 0)
 
 # ECHO
@@ -69,7 +68,7 @@ if (ENABLE_DEBUG)
   target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG)
 endif()
 
-option(ACTIVE_UNITS "Number of active RegEx units in the FPGA implementation" 16)
+option(ACTIVE_UNITS "Number of active Pair-HMM units in the FPGA implementation" 16)
 
 if (ACTIVE_UNITS)
   set(DEF_ACTIVE_UNITS ${ACTIVE_UNITS})
@@ -82,6 +81,5 @@ target_link_libraries(${PROJECT_NAME}
   ${REQUIRED}
   ${LIB_FLETCHER}
   ${LIB_ARROW}
-  ${LIB_RE2}
   ${LIB_PLATFORM}
 )
