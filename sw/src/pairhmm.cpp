@@ -29,8 +29,13 @@
 #include <fletcher/fletcher.h>
 
 // Pair-HMM FPGA UserCore
+#include "scheme.hpp"
 #include "PairHMMUserCore.h"
-#include "pairhmm.h"
+#include "pairhmm.hpp"
+
+// #include "debug_values.hpp"
+#include "utils.hpp"
+#include "batch.hpp"
 
 #ifndef PLATFORM
   #define PLATFORM 0
@@ -40,129 +45,7 @@
     #define DEBUG 1
 #endif
 
-#define PRINT_INT(X) cout << dec << X << ", " << flush
-#define PRINT_HEX(X) cout << hex << X << dec << endl << flush
-
-#define PROBABILITIES 8
-#define PROBS_BYTES (PROBABILITIES * 4)
-
 using namespace std;
-
-/**
- * Create an Arrow table containing one column of random bases.
- */
-shared_ptr<arrow::Table> create_table_hapl(const string& hapl_string)
-{
-        //
-        // listprim(8)
-        //
-        arrow::MemoryPool* pool = arrow::default_memory_pool();
-
-        arrow::StringBuilder hapl_str_builder(pool);
-        hapl_str_builder.Append(hapl_string);
-
-        // Define the schema
-        vector<shared_ptr<arrow::Field> > schema_fields = { arrow::field("haplotype", arrow::binary(), false) };
-
-        const std::vector<std::string> keys = {"fletcher_mode"};
-        const std::vector<std::string> values = {"read"};
-        auto schema_meta = std::make_shared<arrow::KeyValueMetadata>(keys, values);
-
-        auto schema = std::make_shared<arrow::Schema>(schema_fields, schema_meta);
-
-        // Create an array and finish the builder
-        shared_ptr<arrow::Array> hapl_array;
-        hapl_str_builder.Finish(&hapl_array);
-
-        // Create and return the table
-        return move(arrow::Table::Make(schema, { hapl_array }));
-}
-
-shared_ptr<arrow::Table> create_table_reads_reads(const std::string& reads) {
-    //
-    // listprim(8)
-    //
-    arrow::MemoryPool* pool = arrow::default_memory_pool();
-
-    arrow::StringBuilder read_str_builder(pool);
-    read_str_builder.Append(reads);
-
-    // Define the schema
-    vector<shared_ptr<arrow::Field> > schema_fields = { arrow::field("read", arrow::uint8(), false) };
-
-    const std::vector<std::string> keys = {"fletcher_mode"};
-    const std::vector<std::string> values = {"read"};
-    auto schema_meta = std::make_shared<arrow::KeyValueMetadata>(keys, values);
-
-    auto schema = std::make_shared<arrow::Schema>(schema_fields, schema_meta);
-
-    // Create an array and finish the builder
-    shared_ptr<arrow::Array> read_array;
-    read_str_builder.Finish(&read_array);
-
-    // Create and return the table
-    return move(arrow::Table::Make(schema, { read_array }));
-}
-
-shared_ptr<arrow::Table> create_table_reads_probs(int readSize) {
-    //
-    // listprim(fixed_size_binary(32))
-    //
-    arrow::MemoryPool* pool = arrow::default_memory_pool();
-
-    // Define the schema
-    vector<shared_ptr<arrow::Field> > schema_fields = { arrow::field("probs", arrow::fixed_size_binary(32), false) };
-
-    const std::vector<std::string> keys = {"fletcher_mode"};
-    const std::vector<std::string> values = {"read"};
-    auto schema_meta = std::make_shared<arrow::KeyValueMetadata>(keys, values);
-
-    auto schema = std::make_shared<arrow::Schema>(schema_fields, schema_meta);
-
-    std::shared_ptr<arrow::DataType> type_ = arrow::fixed_size_binary(32);
-
-    std::unique_ptr<arrow::ArrayBuilder> tmp;
-    arrow::MakeBuilder(pool, type_, &tmp);
-
-    std::unique_ptr<arrow::FixedSizeBinaryBuilder> builder_;
-    builder_.reset(static_cast<arrow::FixedSizeBinaryBuilder*>(tmp.release()));
-
-    for (int i = 0; i < readSize; ++i) {
-            // Pack probabilities & append for this read
-            ReadProb eta, zeta, epsilon, delta, beta, alpha, distm_diff, distm_simi;
-
-            eta.f = 0.5;
-            zeta.f = 0.25;
-            epsilon.f = 0.5;
-            delta.f = 0.25;
-            beta.f = 0.5;
-            alpha.f = 0.25;
-            distm_diff.f = 0.5;
-            distm_simi.f = 0.25;
-
-            std::vector<ReadProb> probs;
-            probs.push_back(distm_simi);
-            probs.push_back(distm_diff);
-            probs.push_back(alpha);
-            probs.push_back(beta);
-            probs.push_back(delta);
-            probs.push_back(epsilon);
-            probs.push_back(zeta);
-            probs.push_back(eta);
-
-            uint8_t probs_bytes[PROBS_BYTES];
-            copyProbBytes(probs, probs_bytes);
-
-            builder_->Append(probs_bytes);
-    }
-
-    // Create an array and finish the builder
-    shared_ptr<arrow::Array> probs_array;
-    builder_->Finish(&probs_array);
-
-    // Create and return the table
-    return move(arrow::Table::Make(schema, { probs_array }));
-}
 
 /**
  * Main function for pair HMM accelerator
@@ -179,18 +62,70 @@ int main(int argc, char ** argv)
         uint32_t first_index = 0;
         uint32_t last_index = 1;
 
+        t_workload *workload;
+        std::vector<t_batch> batches;
+
+        unsigned long pairs, x, y = 0;
+        int initial_constant_power = 1;
+        bool calculate_sw = true;
+        bool show_results = false;
+        bool show_table = false;
+
+        DEBUG_PRINT("Parsing input arguments...\n");
+        if (argc < 5) {
+                fprintf(stderr,
+                        "ERROR: Correct usage is: %s <-m = manual> ... \n-m: <pairs> <X> <Y> <initial constant power> ... \n-f: <input file>\n... <sw solve?*> <show results?*> <show MID table?*> (* is optional)\n",
+                        "pairhmm");
+                return (-1);
+        } else {
+                if (strncmp(argv[1], "-m", 2) == 0) {
+                        DEBUG_PRINT("Manual input mode selected. %d arguments supplied.\n", argc);
+                        int pairs = strtoul(argv[2], NULL, 0);
+                        int x = strtoul(argv[3], NULL, 0);
+                        int y = strtoul(argv[4], NULL, 0);
+                        initial_constant_power = strtoul(argv[5], NULL, 0);
+
+                        workload = gen_workload(pairs, x, y);
+
+                        if (argc >= 7) istringstream(argv[6]) >> calculate_sw;
+                        if (argc >= 8) istringstream(argv[7]) >> show_results;
+                        if (argc >= 9) istringstream(argv[8]) >> show_table;
+
+                        BENCH_PRINT("M, ");
+                        BENCH_PRINT("%8d, %8d, %8d, ", workload->pairs, x, y);
+                } else {
+                        fprintf(stderr,
+                                "ERROR: Correct usage is: %s <-m = manual> ... \n-m: <pairs> <X> <Y> <initial constant power> ... \n-f: <input file>\n... <sw solve?*> <show results?*> <show MID table?*> (* is optional)\n",
+                                "pairhmm");
+                        return (EXIT_FAILURE);
+                }
+        }
+
+        batches = std::vector<t_batch>(workload->batches);
+        for (int q = 0; q < workload->batches; q++) {
+                fill_batch(batches[q], workload->bx[q], workload->by[q], powf(2.0, initial_constant_power));
+                print_batch_info(batches[q]);
+        }
+
+        // PairHMMPosit pairhmm_posit(workload, show_results, show_table);
+        // PairHMMFloat<float> pairhmm_float(workload, show_results, show_table);
+        // PairHMMFloat<cpp_dec_float_50> pairhmm_dec50(workload, show_results, show_table);
+        //
+        // if (calculate_sw) {
+        //     DEBUG_PRINT("Calculating on host...\n");
+        //     pairhmm_posit.calculate(batches);
+        //     pairhmm_float.calculate(batches);
+        //     pairhmm_dec50.calculate(batches);
+        // }
+
+        // TODO for now, only first batch is supported
+
         // Make a table with haplotypes
-        shared_ptr<arrow::Table> table_hapl = create_table_hapl("ACTGGTCA");
+        shared_ptr<arrow::Table> table_hapl = create_table_hapl(batches[0]);
 
-        // Make a table with reads
-        // std::vector<uint8_t> reads = {'A', 'C', 'T', 'G', 'G', 'T', 'C', 'A'};
-        // shared_ptr<arrow::Table> table_reads = create_table_reads(reads); // For struct
-
-        // Dummy read string
-        std::string reads = "AACCTTGG";
         // Create the read and probabilities columns
-        shared_ptr<arrow::Table> table_reads_reads = create_table_reads_reads(reads);
-        shared_ptr<arrow::Table> table_reads_probs = create_table_reads_probs(reads.size());
+        shared_ptr<arrow::Table> table_reads_reads = create_table_reads_reads(batches[0]);
+        shared_ptr<arrow::Table> table_reads_probs = create_table_reads_probs(batches[0]);
 
         // Match on FPGA
         // Create a platform
@@ -199,18 +134,16 @@ int main(int argc, char ** argv)
 #elif (PLATFORM == 2)
         shared_ptr<fletcher::SNAPPlatform> platform(new fletcher::SNAPPlatform());
 #else
-#error "PLATFORM must be 0, 1 or 2"
+#error "PLATFORM must be 0 or 2"
 #endif
 
         // Prepare the colummn buffers
-        std::vector<std::shared_ptr<arrow::Column>> columns;
+        std::vector<std::shared_ptr<arrow::Column> > columns;
         columns.push_back(table_hapl->column(0));
         columns.push_back(table_reads_reads->column(0));
         columns.push_back(table_reads_probs->column(0));
 
         platform->prepare_column_chunks(columns); // This requires a modification in Fletcher (to accept vectors)
-        // platform->prepare_column_chunks(table_hapl->column(0), table_reads->column(0)); // This requires a modification in Fletcher // For struct
-        // platform->prepare_column_chunks(table_reads->column(0));
 
         // Create a UserCore
         PairHMMUserCore uc(static_pointer_cast<fletcher::FPGAPlatform>(platform));

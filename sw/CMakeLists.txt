@@ -4,14 +4,39 @@ project(pairhmm)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -g")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG=1")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -g -fext-numeric-literals -DPOSIT_VERBOSE_OUTPUT")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG=1 ")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
-add_executable(pairhmm
-	pairhmm.cpp
-	PairHMMUserCore.cpp
-)
+set(EXTERNAL_INSTALL_LOCATION ${CMAKE_BINARY_DIR}/external)
+
+include(ExternalProject)
+ExternalProject_Add(universal
+        GIT_REPOSITORY https://github.com/lvandam/universal
+        GIT_TAG master
+        PREFIX ${EXTERNAL_INSTALL_LOCATION}
+        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${EXTERNAL_INSTALL_LOCATION}
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND ""
+        INSTALL_COMMAND ""
+        )
+
+include_directories(${EXTERNAL_INSTALL_LOCATION}/src/universal)
+
+file(GLOB pairhmm_SRC
+        "src/*.hpp"
+        "src/*.cpp"
+        )
+
+#add_executable(pairhmm
+#    utils.cpp
+#    batch.cpp
+#    scheme.cpp
+#	pairhmm.cpp
+#	PairHMMUserCore.cpp
+#)
+add_executable(pairhmm ${pairhmm_SRC})
+add_dependencies(pairhmm universal)
 
 find_library(LIB_FLETCHER fletcher)
 find_library(LIB_ARROW arrow)
