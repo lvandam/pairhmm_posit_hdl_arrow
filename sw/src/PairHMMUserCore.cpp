@@ -53,6 +53,25 @@ fr_t PairHMMUserCore::generate_unit_arguments(uint32_t first_index,
         return conv.full;
 }
 
+void PairHMMUserCore::set_batch_meta(t_batch& batch) {
+    t_inits& init = batch.init;
+
+    reg_conv_t x_y;
+    x_y.half.hi = init.x_size;
+    x_y.half.lo = init.y_size;
+    this->platform()->write_mmio(REG_X_Y_OFFSET, x_y.full);
+
+    reg_conv_t xp_yp;
+    xp_yp.half.hi = init.x_padded;
+    xp_yp.half.lo = init.y_padded;
+    this->platform()->write_mmio(REG_XP_YP_OFFSET, xp_yp.full);
+
+    reg_conv_t xbpp;
+    xbpp.half.hi = 0x00000000;
+    xbpp.half.lo = init.x_bppadded;
+    this->platform()->write_mmio(REG_XBPP_OFFSET, xbpp.full);
+}
+
 void PairHMMUserCore::set_arguments(uint32_t first_index, uint32_t last_index)
 {
         std::vector<fr_t> arguments;
@@ -67,19 +86,22 @@ void PairHMMUserCore::get_matches(std::vector<uint32_t>& matches)
         int np = matches.size();
 
         reg_conv_t conv;
-        this->platform()->read_mmio(REUC_RESULT_OFFSET, &conv.full);
+        this->platform()->read_mmio(REG_RESULT_OFFSET, &conv.full);
         matches[0] += conv.half.hi;
         matches[1] += conv.half.lo;
 }
 
 void PairHMMUserCore::control_zero()
 {
-        this->platform()->write_mmio(REUC_CONTROL_OFFSET, 0x00000000);
+        this->platform()->write_mmio(REG_CONTROL_OFFSET, 0x00000000);
 }
 
 void PairHMMUserCore::get_result(uint32_t& result)
 {
         reg_conv_t conv;
-        this->platform()->read_mmio(REUC_RESULT_OFFSET, &conv.full);
+        this->platform()->read_mmio(REG_RESULT_OFFSET, &conv.full);
         result = conv.half.lo;
 }
+
+
+// write_mmio

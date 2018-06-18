@@ -19,10 +19,17 @@
 #include "fletcher/FPGAPlatform.h"
 #include "fletcher/UserCore.h"
 
+#include "batch.hpp"
+
 #define REUC_TOTAL_UNITS   1
 
-#define REUC_RESULT_OFFSET 13
-#define REUC_CONTROL_OFFSET  1
+#define REG_CONTROL_OFFSET  1
+#define REG_HAPL_FIRSTLAST_OFFSET 8
+#define REG_READ_FIRSTLAST_OFFSET 9
+#define REG_X_Y_OFFSET 10
+#define REG_XP_YP_OFFSET 11
+#define REG_XBPP_OFFSET 12
+#define REG_RESULT_OFFSET 13
 
 /**
  * \class PairHMMUserCore
@@ -36,6 +43,8 @@ class PairHMMUserCore : public fletcher::UserCore
    * \param platform  The platform to run the PairHMMUserCore on.
    */
   PairHMMUserCore(std::shared_ptr<fletcher::FPGAPlatform> platform);
+
+  void set_batch_meta(t_batch& batch);
 
   /**
    * \brief Set arguments for the RegEx units based on first and last index
