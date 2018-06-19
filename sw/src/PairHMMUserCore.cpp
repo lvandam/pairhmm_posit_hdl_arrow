@@ -29,56 +29,24 @@ PairHMMUserCore::PairHMMUserCore(std::shared_ptr<fletcher::FPGAPlatform> platfor
         done_status_mask = 0x0000000000000003;// 0x000000000000FFFF;
 }
 
-fr_t PairHMMUserCore::generate_unit_arguments(uint32_t first_index,
-                                                         uint32_t last_index)
-{
-        /*
-         * Generate arguments for the haplotype ColumnReader
-         * Because the arguments for each REM unit are two 32-bit integers,
-         * but the register model for UserCores is 64-bit, we need to
-         * determine each 64-bit register value.
-         */
-
-        if (first_index >= last_index) {
-                throw std::runtime_error("First index cannot be larger than "
-                                         "or equal to last index.");
-        }
-
-        // Every unit needs two 32 bit argument, which is one 64-bit argument
-        reg_conv_t conv;
-        // First indices
-        conv.half.hi = first_index;
-        conv.half.lo = last_index;
-
-        return conv.full;
-}
-
-void PairHMMUserCore::set_batch_meta(t_batch& batch) {
-    t_inits& init = batch.init;
-
+void PairHMMUserCore::set_batch_init(t_inits& init) {
+    // X size & Y size
     reg_conv_t x_y;
     x_y.half.hi = init.x_size;
     x_y.half.lo = init.y_size;
     this->platform()->write_mmio(REG_X_Y_OFFSET, x_y.full);
 
+    // X padded size & Y padded size
     reg_conv_t xp_yp;
     xp_yp.half.hi = init.x_padded;
     xp_yp.half.lo = init.y_padded;
     this->platform()->write_mmio(REG_XP_YP_OFFSET, xp_yp.full);
 
+    // X BP padded size
     reg_conv_t xbpp;
     xbpp.half.hi = 0x00000000;
     xbpp.half.lo = init.x_bppadded;
     this->platform()->write_mmio(REG_XBPP_OFFSET, xbpp.full);
-}
-
-void PairHMMUserCore::set_arguments(uint32_t first_index, uint32_t last_index)
-{
-        std::vector<fr_t> arguments;
-        arguments.push_back(this->generate_unit_arguments(first_index, last_index)); // Haplotype first & last idx
-        arguments.push_back(this->generate_unit_arguments(first_index, last_index)); // Read first & last idx
-
-        UserCore::set_arguments(arguments);
 }
 
 void PairHMMUserCore::get_matches(std::vector<uint32_t>& matches)

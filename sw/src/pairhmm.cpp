@@ -152,8 +152,7 @@ int main(int argc, char ** argv)
         uc.reset();
 
         // Run
-        uc.set_batch_meta(batches[0]);
-        uc.set_arguments(first_index, last_index);
+        uc.set_batch_init(batches[0].init);
         uc.start();
 
 #ifdef DEBUG
