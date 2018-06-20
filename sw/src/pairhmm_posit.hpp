@@ -61,10 +61,10 @@ public:
                     result_sw_m[i * PIPE_DEPTH + j][0] += M[x][c];
                     result_sw_i[i * PIPE_DEPTH + j][0] += I[x][c];
 
-                    //if(i * PIPE_DEPTH + j == 0) {
-                    //    cout << (i*PIPE_DEPTH+j) <<" SUM M " << hexstring(M[x][c].get()) << " -- " << hexstring(result_sw_m[i * PIPE_DEPTH + j][0].get()) << endl;
-                    //    cout << (i*PIPE_DEPTH+j) <<" SUM I " << hexstring(I[x][c].get()) << " -- " << hexstring(result_sw_i[i * PIPE_DEPTH + j][0].get()) << endl;
-                    //}
+                    if(i * PIPE_DEPTH + j == 0) {
+                        cout << (i*PIPE_DEPTH+j) <<" SUM M " << hexstring(M[x][c].get()) << " -- " << hexstring(result_sw_m[i * PIPE_DEPTH + j][0].get()) << endl;
+                        cout << (i*PIPE_DEPTH+j) <<" SUM I " << hexstring(I[x][c].get()) << " -- " << hexstring(result_sw_i[i * PIPE_DEPTH + j][0].get()) << endl;
+                    }
                 }
 
                 result_sw[i*PIPE_DEPTH+j][0] = result_sw_m[i * PIPE_DEPTH + j][0] + result_sw_i[i * PIPE_DEPTH + j][0];
@@ -83,10 +83,10 @@ public:
     }
 
     void calculate_mids(t_batch& batch, int pair, int r, int c, t_matrix& M, t_matrix& I, t_matrix& D) {
-        t_inits init = batch.init;
-        std::vector<t_bbase> read = batch.read;
-        std::vector<t_bbase> hapl = batch.hapl;
-        std::vector<t_probs> prob = batch.prob;
+        t_inits& init = batch.init;
+        std::vector<t_bbase>& read = batch.read;
+        std::vector<t_bbase>& hapl = batch.hapl;
+        std::vector<t_probs>& prob = batch.prob;
 
         // Set to zero and intial value in the X direction
         for (int j = 0; j < c + 1; j++) {
@@ -107,23 +107,43 @@ public:
             for (int j = 1; j < c + 1; j++) {
                 posit<NBITS, ES> distm_simi, distm_diff, alpha, beta, delta, upsilon, zeta, eta, distm;
 
-                distm_simi.set_raw_bits(prob[(i - 1) * PIPE_DEPTH + pair].p[7].b);
-                distm_diff.set_raw_bits(prob[(i - 1) * PIPE_DEPTH + pair].p[6].b);
-                alpha.set_raw_bits(prob[(i - 1) * PIPE_DEPTH + pair].p[5].b);
-                beta.set_raw_bits(prob[(i - 1) * PIPE_DEPTH + pair].p[4].b);
-                delta.set_raw_bits(prob[(i - 1) * PIPE_DEPTH + pair].p[3].b);
-                upsilon.set_raw_bits(prob[(i - 1) * PIPE_DEPTH + pair].p[2].b);
-                zeta.set_raw_bits(prob[(i - 1) * PIPE_DEPTH + pair].p[1].b);
-                eta.set_raw_bits(prob[(i - 1) * PIPE_DEPTH + pair].p[0].b);
+//                distm_simi.set_raw_bits(prob[(i - 1) * PIPE_DEPTH + pair].p[7].b);
+//                distm_diff.set_raw_bits(prob[(i - 1) * PIPE_DEPTH + pair].p[6].b);
+//                alpha.set_raw_bits(prob[(i - 1) * PIPE_DEPTH + pair].p[5].b);
+//                beta.set_raw_bits(prob[(i - 1) * PIPE_DEPTH + pair].p[4].b);
+//                delta.set_raw_bits(prob[(i - 1) * PIPE_DEPTH + pair].p[3].b);
+//                upsilon.set_raw_bits(prob[(i - 1) * PIPE_DEPTH + pair].p[2].b);
+//                zeta.set_raw_bits(prob[(i - 1) * PIPE_DEPTH + pair].p[1].b);
+//                eta.set_raw_bits(prob[(i - 1) * PIPE_DEPTH + pair].p[0].b);
 
-                unsigned char rb = read[i - 1].base[pair];
-                unsigned char hb = hapl[j - 1].base[pair];
+                distm_simi.set_raw_bits(prob[(i - 1) + pair].p[0].b);
+                distm_diff.set_raw_bits(prob[(i - 1) + pair].p[1].b);
+                alpha.set_raw_bits(prob[(i - 1) + pair].p[2].b);
+                beta.set_raw_bits(prob[(i - 1) + pair].p[3].b);
+                delta.set_raw_bits(prob[(i - 1) + pair].p[4].b);
+                upsilon.set_raw_bits(prob[(i - 1) + pair].p[5].b);
+                zeta.set_raw_bits(prob[(i - 1) + pair].p[6].b);
+                eta.set_raw_bits(prob[(i - 1) + pair].p[7].b);
+
+                unsigned char rb = read[i - 1 + pair].base;
+                unsigned char hb = hapl[j - 1 + pair].base;
 
                 if (rb == hb || rb == 'N' || hb == 'N') {
                     distm = distm_simi;
                 } else {
                     distm = distm_diff;
                 }
+
+//                if(pair == 0) {
+//                    cout << "eta = " << hexstring(eta.collect()) << endl;
+//                    cout << "zeta = " << hexstring(zeta.collect()) << endl;
+//                    cout << "upsilon = " << hexstring(upsilon.collect()) << endl;
+//                    cout << "delta = " << hexstring(delta.collect()) << endl;
+//                    cout << "beta = " << hexstring(beta.collect()) << endl;
+//                    cout << "alpha = " << hexstring(alpha.collect()) << endl;
+//                    cout << "distm_diff = " << hexstring(distm_diff.collect()) << endl;
+//                    cout << "distm_simi = " << hexstring(distm_simi.collect()) << endl;
+//                }
 
                 M[i][j] = distm * (alpha * M[i - 1][j - 1] + beta * I[i - 1][j - 1] + beta * D[i - 1][j - 1]);
                 I[i][j] = delta * M[i - 1][j] + upsilon * I[i - 1][j];
@@ -169,7 +189,7 @@ public:
         printf("\n");
         printf("    ║");
         for (uint32_t i = 0; i < c + 1; i++) {
-            printf("      %5d , %c           ║", i, (i > 0) ? (hapl[i - 1].base[pair]) : '-');
+            printf("      %5d , %c           ║", i, (i > 0) ? (hapl[i - 1 + pair].base) : '-');
         }
         printf("\n");
         printf("%3d ║", pair);
@@ -190,7 +210,7 @@ public:
 
         // loop over rows
         for (uint32_t j = 0; j < r + 1; j++) {
-            printf("%2d,%c║", j, (j > 0) ? (read[j - 1].base[pair]) : ('-'));
+            printf("%2d,%c║", j, (j > 0) ? (read[j - 1 + pair].base) : ('-'));
             // loop over columns
             for (uint32_t i = 0; i < c + 1; i++) {
                 printf("%08X %08X %08X║", (float) M[j][i], (float) I[j][i], (float) D[j][i]);

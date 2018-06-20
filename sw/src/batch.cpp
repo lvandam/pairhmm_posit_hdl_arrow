@@ -41,11 +41,10 @@ void fill_batch(t_batch& batch, int x, int y, float initial) {
     int yp = py(y); // Padded haplotype size
     int ybp = pbp(yp); // Padded base pair (how many haplos)
 
-    read.resize(xbp+PIPE_DEPTH-1);
-    hapl.resize(ybp+PIPE_DEPTH-1);
-    prob.resize(xp+PIPE_DEPTH-1);
+    read.resize(xbp + PIPE_DEPTH - 1);
+    hapl.resize(ybp + PIPE_DEPTH - 1);
+    prob.resize(xp + PIPE_DEPTH - 1);
 
-    // init.batch_bytes = calc_batch_size(x, y, PES);
     init.x_size = xp;
     init.x_padded = xp;
     init.x_bppadded = xbp;
@@ -58,7 +57,7 @@ void fill_batch(t_batch& batch, int x, int y, float initial) {
         posit<NBITS, ES> initial_posit(initial / yp);
 
         // Get raw bits to send to HW
-        init.initials[k] = to_uint(initial_posit);
+        init.initials[k] = 0x10000000;//to_uint(initial_posit);
 
         for (int i = 0; i < xbp; i++) {
             if (i < x) {

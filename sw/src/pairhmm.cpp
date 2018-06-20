@@ -107,16 +107,16 @@ int main(int argc, char ** argv)
                 print_batch_info(batches[q]);
         }
 
-        // PairHMMPosit pairhmm_posit(workload, show_results, show_table);
+        PairHMMPosit pairhmm_posit(workload, show_results, show_table);
         // PairHMMFloat<float> pairhmm_float(workload, show_results, show_table);
         // PairHMMFloat<cpp_dec_float_50> pairhmm_dec50(workload, show_results, show_table);
         //
-        // if (calculate_sw) {
-        //     DEBUG_PRINT("Calculating on host...\n");
-        //     pairhmm_posit.calculate(batches);
+        if (calculate_sw) {
+            DEBUG_PRINT("Calculating on host...\n");
+            pairhmm_posit.calculate(batches);
         //     pairhmm_float.calculate(batches);
         //     pairhmm_dec50.calculate(batches);
-        // }
+        }
 
         // TODO for now, only first batch is supported
 

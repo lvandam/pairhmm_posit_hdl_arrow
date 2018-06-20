@@ -21,22 +21,22 @@ using namespace std;
 using namespace sw::unum;
 using boost::multiprecision::cpp_dec_float_50;
 
-// cpp_dec_float_50 decimal_accuracy(cpp_dec_float_50 exact, cpp_dec_float_50 computed) {
-//     if (boost::math::isnan(exact) || boost::math::isnan(computed) ||
-//         (boost::math::sign(exact) != boost::math::sign(computed))) {
-//         return std::numeric_limits<cpp_dec_float_50>::quiet_NaN();
-//     } else if (exact == computed) {
-//         return std::numeric_limits<cpp_dec_float_50>::infinity();
-//     } else if ((exact == std::numeric_limits<cpp_dec_float_50>::infinity() &&
-//                 computed != std::numeric_limits<cpp_dec_float_50>::infinity()) ||
-//                (exact != std::numeric_limits<cpp_dec_float_50>::infinity() &&
-//                 computed == std::numeric_limits<cpp_dec_float_50>::infinity()) || (exact == 0 && computed != 0) ||
-//                (exact != 0 && computed == 0)) {
-//         return -std::numeric_limits<cpp_dec_float_50>::infinity();
-//     } else {
-//         return -log10(abs(log10(computed / exact)));
-//     }
-// }
+cpp_dec_float_50 decimal_accuracy(cpp_dec_float_50 exact, cpp_dec_float_50 computed) {
+    if (boost::math::isnan(exact) || boost::math::isnan(computed) ||
+        (boost::math::sign(exact) != boost::math::sign(computed))) {
+        return std::numeric_limits<cpp_dec_float_50>::quiet_NaN();
+    } else if (exact == computed) {
+        return std::numeric_limits<cpp_dec_float_50>::infinity();
+    } else if ((exact == std::numeric_limits<cpp_dec_float_50>::infinity() &&
+                computed != std::numeric_limits<cpp_dec_float_50>::infinity()) ||
+               (exact != std::numeric_limits<cpp_dec_float_50>::infinity() &&
+                computed == std::numeric_limits<cpp_dec_float_50>::infinity()) || (exact == 0 && computed != 0) ||
+               (exact != 0 && computed == 0)) {
+        return -std::numeric_limits<cpp_dec_float_50>::infinity();
+    } else {
+        return -log10(abs(log10(computed / exact)));
+    }
+}
 
 // void writeBenchmark(PairHMMFloat<cpp_dec_float_50> &pairhmm_dec50, PairHMMFloat<float> &pairhmm_float,
 //                     PairHMMPosit &pairhmm_posit, DebugValues<posit<NBITS, ES>> &hw_debug_values, std::string filename,

@@ -51,4 +51,37 @@ using namespace sw::unum;
 #define PROBABILITIES 8
 #define PROBS_BYTES (PROBABILITIES * 4)
 
+struct Entry {
+    string name;
+    cpp_dec_float_50 value;
+};
+
+struct find_entry {
+    string name;
+
+    find_entry(string name) : name(name) {}
+
+    bool operator()(const Entry &m) const {
+        return m.name == name;
+    }
+};
+
+template<size_t nbits>
+std::string hexstring(bitblock<nbits> bits) {
+    char str[8];
+    const char *hexits = "0123456789ABCDEF";
+    unsigned int max = 8;
+    for (unsigned int i = 0; i < max; i++) {
+        unsigned int hexit = (bits[3] << 3) + (bits[2] << 2) + (bits[1] << 1) + bits[0];
+        str[max - 1 - i] = hexits[hexit];
+        bits >>= 4;
+    }
+    return std::string(str);
+}
+
+template<size_t nbits, size_t es>
+uint32_t to_uint(posit<nbits, es> number) {
+    return (uint32_t) number.collect().to_ulong();
+}
+
 #endif //__DEFINES_H
