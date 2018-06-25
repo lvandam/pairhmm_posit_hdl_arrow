@@ -46,7 +46,7 @@ entity action_pairhmm is
 
     -- Parameters of Axi Master Bus Interface AXI_HOST_MEM ; to Host memory
     C_AXI_HOST_MEM_ID_WIDTH     : integer := 2;
-    C_AXI_HOST_MEM_ADDR_WIDTH   : integer := 96;--64
+    C_AXI_HOST_MEM_ADDR_WIDTH   : integer := 96;  --64
     C_AXI_HOST_MEM_DATA_WIDTH   : integer := 512;
     C_AXI_HOST_MEM_AWUSER_WIDTH : integer := 1;
     C_AXI_HOST_MEM_ARUSER_WIDTH : integer := 1;
@@ -208,76 +208,93 @@ architecture action_pairhmm of action_pairhmm is
   signal regexp_space_w : std_logic;
 
   component arrow_pairhmm is
-	generic (
-	-- Host bus properties
-	BUS_ADDR_WIDTH : natural := 64;
-	BUS_DATA_WIDTH : natural := 512;
+    generic (
+      -- Number of pair HMM units. Must be a natural multiple of 2
+      CORES : natural := 1;
 
-	-- MMIO bus properties
-	SLV_BUS_ADDR_WIDTH : natural := 32;
-	SLV_BUS_DATA_WIDTH : natural := 32;
+      -- Host bus properties
+      BUS_ADDR_WIDTH : natural := 64;
+      BUS_DATA_WIDTH : natural := 512;
 
-	REG_WIDTH : natural := 32
+      -- MMIO bus properties
+      SLV_BUS_ADDR_WIDTH : natural := 32;
+      SLV_BUS_DATA_WIDTH : natural := 32;
 
-	-- (Generic defaults are set for SystemVerilog compatibility)
-	);
+      REG_WIDTH : natural := 32
 
-	port (
-	clk     : in std_logic;
-	reset_n : in std_logic;
+     -- (Generic defaults are set for SystemVerilog compatibility)
+      );
 
-	---------------------------------------------------------------------------
-	-- AXI4 master
-	--
-	-- To be connected to the DDR controllers (through CL_DMA_PCIS_SLV)
-	---------------------------------------------------------------------------
-	-- Read address channel
-	m_axi_araddr  : out std_logic_vector(BUS_ADDR_WIDTH-1 downto 0);
-	m_axi_arlen   : out std_logic_vector(7 downto 0);
-	m_axi_arvalid : out std_logic;
-	m_axi_arready : in  std_logic;
-	m_axi_arsize  : out std_logic_vector(2 downto 0);
+    port (
+      clk     : in std_logic;
+      reset_n : in std_logic;
 
-	-- Read data channel
-	m_axi_rdata  : in  std_logic_vector(BUS_DATA_WIDTH-1 downto 0);
-	m_axi_rresp  : in  std_logic_vector(1 downto 0);
-	m_axi_rlast  : in  std_logic;
-	m_axi_rvalid : in  std_logic;
-	m_axi_rready : out std_logic;
+      ---------------------------------------------------------------------------
+      -- AXI4 master
+      --
+      -- To be connected to the DDR controllers (through CL_DMA_PCIS_SLV)
+      ---------------------------------------------------------------------------
+      -- Read address channel
+      m_axi_araddr  : out std_logic_vector(BUS_ADDR_WIDTH-1 downto 0);
+      m_axi_arlen   : out std_logic_vector(7 downto 0);
+      m_axi_arvalid : out std_logic;
+      m_axi_arready : in  std_logic;
+      m_axi_arsize  : out std_logic_vector(2 downto 0);
 
-	---------------------------------------------------------------------------
-	-- AXI4-lite slave
-	--
-	-- To be connected to "sh_cl_sda" a.k.a. "AppPF Bar 1"
-	---------------------------------------------------------------------------
-	-- Write adress
-	s_axi_awvalid : in  std_logic;
-	s_axi_awready : out std_logic;
-	s_axi_awaddr  : in  std_logic_vector(SLV_BUS_ADDR_WIDTH-1 downto 0);
+      -- Read data channel
+      m_axi_rdata  : in  std_logic_vector(BUS_DATA_WIDTH-1 downto 0);
+      m_axi_rresp  : in  std_logic_vector(1 downto 0);
+      m_axi_rlast  : in  std_logic;
+      m_axi_rvalid : in  std_logic;
+      m_axi_rready : out std_logic;
 
-	-- Write data
-	s_axi_wvalid : in  std_logic;
-	s_axi_wready : out std_logic;
-	s_axi_wdata  : in  std_logic_vector(SLV_BUS_DATA_WIDTH-1 downto 0);
-	s_axi_wstrb  : in  std_logic_vector((SLV_BUS_DATA_WIDTH/8)-1 downto 0);
+      -- Write address channel
+      m_axi_awvalid : out std_logic;
+      m_axi_awready : in  std_logic;
+      m_axi_awaddr  : out std_logic_vector(BUS_ADDR_WIDTH-1 downto 0);
+      m_axi_awlen   : out std_logic_vector(7 downto 0);
+      m_axi_awsize  : out std_logic_vector(2 downto 0);
 
-	-- Write response
-	s_axi_bvalid : out std_logic;
-	s_axi_bready : in  std_logic;
-	s_axi_bresp  : out std_logic_vector(1 downto 0);
+      -- Write data channel
+      m_axi_wvalid : out std_logic;
+      m_axi_wready : in  std_logic;
+      m_axi_wdata  : out std_logic_vector(BUS_DATA_WIDTH-1 downto 0);
+      m_axi_wlast  : out std_logic;
+      m_axi_wstrb  : out std_logic_vector(BUS_DATA_WIDTH/8-1 downto 0);
 
-	-- Read address
-	s_axi_arvalid : in  std_logic;
-	s_axi_arready : out std_logic;
-	s_axi_araddr  : in  std_logic_vector(SLV_BUS_ADDR_WIDTH-1 downto 0);
+      ---------------------------------------------------------------------------
+      -- AXI4-lite slave
+      --
+      -- To be connected to "sh_cl_sda" a.k.a. "AppPF Bar 1"
+      ---------------------------------------------------------------------------
+      -- Write adress
+      s_axi_awvalid : in  std_logic;
+      s_axi_awready : out std_logic;
+      s_axi_awaddr  : in  std_logic_vector(SLV_BUS_ADDR_WIDTH-1 downto 0);
 
-	-- Read data
-	s_axi_rvalid : out std_logic;
-	s_axi_rready : in  std_logic;
-	s_axi_rdata  : out std_logic_vector(SLV_BUS_DATA_WIDTH-1 downto 0);
-	s_axi_rresp  : out std_logic_vector(1 downto 0)
-	);
-	end component;
+      -- Write data
+      s_axi_wvalid : in  std_logic;
+      s_axi_wready : out std_logic;
+      s_axi_wdata  : in  std_logic_vector(SLV_BUS_DATA_WIDTH-1 downto 0);
+      s_axi_wstrb  : in  std_logic_vector((SLV_BUS_DATA_WIDTH/8)-1 downto 0);
+
+      -- Write response
+      s_axi_bvalid : out std_logic;
+      s_axi_bready : in  std_logic;
+      s_axi_bresp  : out std_logic_vector(1 downto 0);
+
+      -- Read address
+      s_axi_arvalid : in  std_logic;
+      s_axi_arready : out std_logic;
+      s_axi_araddr  : in  std_logic_vector(SLV_BUS_ADDR_WIDTH-1 downto 0);
+
+      -- Read data
+      s_axi_rvalid : out std_logic;
+      s_axi_rready : in  std_logic;
+      s_axi_rdata  : out std_logic_vector(SLV_BUS_DATA_WIDTH-1 downto 0);
+      s_axi_rresp  : out std_logic_vector(1 downto 0)
+      );
+  end component;
 
 begin
 
@@ -412,9 +429,9 @@ begin
   -- AXI Host Memory
   ----------------------------------------------------------------------
   -- Write channel tie off
-  axi_host_mem_awvalid <= '0';
-  axi_host_mem_wvalid  <= '0';
-  axi_host_mem_bready  <= '0';
+  -- axi_host_mem_awvalid <= '0';
+  -- axi_host_mem_wvalid  <= '0';
+  -- axi_host_mem_bready  <= '0';
 
   -- Read channel defaults:
   axi_host_mem_arsize  <= "110";        -- 512 bit beats
@@ -461,6 +478,20 @@ begin
       m_axi_rlast  => axi_host_mem_rlast,
       m_axi_rvalid => axi_host_mem_rvalid,
       m_axi_rready => axi_host_mem_rready,
+
+      -- Write address channel
+      m_axi_awvalid => axi_host_mem_awvalid,
+      m_axi_awready => axi_host_mem_awready,
+      m_axi_awaddr  => axi_host_mem_awaddr,
+      m_axi_awlen   => axi_host_mem_awlen,
+      m_axi_awsize  => open,
+
+      -- Write data channel
+      m_axi_wvalid => axi_host_mem_wvalid,
+      m_axi_wready => axi_host_mem_wready,
+      m_axi_wdata  => axi_host_mem_wdata,
+      m_axi_wlast  => axi_host_mem_wlast,
+      m_axi_wstrb  => axi_host_mem_wstrb,
 
       ---------------------------------------------------------------------------
       -- AXI4-lite slave

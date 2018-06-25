@@ -25,10 +25,10 @@
 
 #define REG_CONTROL_OFFSET  1
 
-#define REG_X_Y_OFFSET 8
-#define REG_XP_YP_OFFSET 9
-#define REG_XBPP_OFFSET 10
-#define REG_RESULT_OFFSET 11
+#define REG_X_Y_OFFSET 10
+#define REG_XP_YP_OFFSET 11
+#define REG_XBPP_OFFSET 12
+#define REG_RESULT_OFFSET 13
 
 /**
  * \class PairHMMUserCore
