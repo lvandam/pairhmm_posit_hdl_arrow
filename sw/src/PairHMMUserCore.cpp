@@ -29,7 +29,13 @@ PairHMMUserCore::PairHMMUserCore(std::shared_ptr<fletcher::FPGAPlatform> platfor
         done_status_mask = 0x0000000000000003;// 0x000000000000FFFF;
 }
 
-void PairHMMUserCore::set_batch_init(t_inits& init) {
+void PairHMMUserCore::set_batch_init(t_inits& init, uint32_t xlen, uint32_t ylen) {
+    // X len & Y len
+    reg_conv_t xlen_ylen;
+    xlen_ylen.half.hi = xlen;
+    xlen_ylen.half.lo = ylen;
+    this->platform()->write_mmio(REG_XLEN_YLEN_OFFSET, xlen_ylen.full);
+
     // X size & Y size
     reg_conv_t x_y;
     x_y.half.hi = init.x_size;
@@ -43,10 +49,10 @@ void PairHMMUserCore::set_batch_init(t_inits& init) {
     this->platform()->write_mmio(REG_XP_YP_OFFSET, xp_yp.full);
 
     // X BP padded size
-    reg_conv_t xbpp;
-    xbpp.half.hi = 0x00000000;
-    xbpp.half.lo = init.x_bppadded;
-    this->platform()->write_mmio(REG_XBPP_OFFSET, xbpp.full);
+    reg_conv_t xbpp_initial;
+    xbpp_initial.half.hi = init.x_bppadded;
+    xbpp_initial.half.lo = init.initials[0];
+    this->platform()->write_mmio(REG_XBPP_INITIAL_OFFSET, xbpp_initial.full);
 }
 
 void PairHMMUserCore::get_matches(std::vector<uint32_t>& matches)

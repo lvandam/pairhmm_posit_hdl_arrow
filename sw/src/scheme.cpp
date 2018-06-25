@@ -128,3 +128,38 @@ shared_ptr<arrow::Table> create_table_reads_probs(t_batch& batch)
         // Create and return the table
         return move(arrow::Table::Make(schema, { probs_array }));
 }
+
+/**
+ * Create an Arrow table containing one column of results
+ */
+shared_ptr<arrow::Table> create_table_result()
+{
+    //
+    // listprim(fixed_size_binary(32))
+    //
+    arrow::MemoryPool* pool = arrow::default_memory_pool();
+
+    // Define the schema
+    vector<shared_ptr<arrow::Field> > schema_fields = { arrow::field("result", arrow::fixed_size_binary(32), false) };
+
+    const std::vector<std::string> keys = {"fletcher_mode"};
+    const std::vector<std::string> values = {"read"};
+    auto schema_meta = std::make_shared<arrow::KeyValueMetadata>(keys, values);
+
+    auto schema = std::make_shared<arrow::Schema>(schema_fields, schema_meta);
+
+    std::shared_ptr<arrow::DataType> type_ = arrow::fixed_size_binary(32);
+
+    std::unique_ptr<arrow::ArrayBuilder> tmp;
+    arrow::MakeBuilder(pool, type_, &tmp);
+
+    std::unique_ptr<arrow::FixedSizeBinaryBuilder> builder_;
+    builder_.reset(static_cast<arrow::FixedSizeBinaryBuilder*>(tmp.release()));
+
+    // Create an array and finish the builder
+    shared_ptr<arrow::Array> result_array;
+    builder_->Finish(&result_array);
+
+    // Create and return the table
+    return move(arrow::Table::Make(schema, { result_array }));
+}

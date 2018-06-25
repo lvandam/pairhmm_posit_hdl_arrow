@@ -68,7 +68,7 @@ void fill_batch(t_batch& batch, int x, int y, float initial) {
 
     // Get raw bits to send to HW
     for(int k = 0; k < PIPE_DEPTH; k++) {
-        init.initials[k] = 0x10000000;//to_uint(initial_posit);
+        init.initials[k] = 0x10000000;//to_uint(initial_posit); -- TODO Laurens: remove this
     }
 
     for (int i = 0; i < xp + x - 1; i++) {

@@ -45,7 +45,23 @@
     #define DEBUG 1
 #endif
 
+/* Burst step length in bytes */
+#define BURST_LENGTH    8
+
 using namespace std;
+
+/* Structure to easily convert from 64-bit addresses to 2x32-bit registers */
+typedef struct _lohi {
+        uint32_t lo;
+        uint32_t hi;
+}
+lohi;
+
+typedef union _addr_lohi {
+        uint64_t full;
+        lohi half;
+}
+addr_lohi;
 
 /**
  * Main function for pair HMM accelerator
@@ -112,10 +128,10 @@ int main(int argc, char ** argv)
         // PairHMMFloat<cpp_dec_float_50> pairhmm_dec50(workload, show_results, show_table);
         //
         if (calculate_sw) {
-            DEBUG_PRINT("Calculating on host...\n");
-            pairhmm_posit.calculate(batches);
-        //     pairhmm_float.calculate(batches);
-        //     pairhmm_dec50.calculate(batches);
+                DEBUG_PRINT("Calculating on host...\n");
+                pairhmm_posit.calculate(batches);
+                //     pairhmm_float.calculate(batches);
+                //     pairhmm_dec50.calculate(batches);
         }
 
         // TODO for now, only first batch is supported
@@ -126,6 +142,9 @@ int main(int argc, char ** argv)
         // Create the read and probabilities columns
         shared_ptr<arrow::Table> table_reads_reads = create_table_reads_reads(batches[0]);
         shared_ptr<arrow::Table> table_reads_probs = create_table_reads_probs(batches[0]);
+
+        // Create result column
+        // shared_ptr<arrow::Table> table_results = create_table_result();
 
         // Match on FPGA
         // Create a platform
@@ -142,17 +161,42 @@ int main(int argc, char ** argv)
         columns.push_back(table_hapl->column(0));
         columns.push_back(table_reads_reads->column(0));
         columns.push_back(table_reads_probs->column(0));
+        // columns.push_back(table_results->column(0));
 
         platform->prepare_column_chunks(columns); // This requires a modification in Fletcher (to accept vectors)
 
         // Create a UserCore
         PairHMMUserCore uc(static_pointer_cast<fletcher::FPGAPlatform>(platform));
 
+        // TODO Temporary
+        int rc = 0;
+        uint32_t num_rows = 32;
+        uint32_t * off_buf;
+        uint32_t * val_buf;
+        rc = posix_memalign((void * * ) &off_buf, BURST_LENGTH, sizeof(uint32_t) * (num_rows + 1));
+        // clear offset buffer
+        for (uint32_t i = 0; i < num_rows + 1; i++) {
+                off_buf[i] = 0xDEADBEEF;
+        }
+        rc = posix_memalign((void * * ) &val_buf, BURST_LENGTH, sizeof(uint32_t) * num_rows);
+        // clear values buffer
+        for (uint32_t i = 0; i < num_rows; i++) {
+                val_buf[i] = 0x00000000;
+        }
+        addr_lohi off, val;
+        off.full = (uint64_t) off_buf;
+        val.full = (uint64_t) val_buf;
+        printf("Offsets buffer @ %016lX\n", off.full);
+        printf("Values buffer @ %016lX\n", val.full);
+        platform->write_mmio(REG_RESULT_OFF_OFFSET, off.full);
+        platform->write_mmio(REG_RESULT_DATA_OFFSET, val.full);
+        // TODO END Temporary
+
         // Reset it
         uc.reset();
 
         // Run
-        uc.set_batch_init(batches[0].init);
+        uc.set_batch_init(batches[0].init, 6, 6); // Correctly convert x and y to uint32_t
         uc.start();
 
 #ifdef DEBUG
@@ -166,7 +210,10 @@ int main(int argc, char ** argv)
         // Get the result from FPGA
         uc.get_result(fpga_result);
 
-        cout << "RESULT: " << hex << fpga_result << endl;
+        // cout << "RESULT: " << hex << fpga_result << endl;
+        for(int i = 0; i < 32; i++) {
+            cout << "RESULT: " << hex << (uint32_t)val_buf[i] << endl;
+        }
         cout << endl;
 
         return 0;
