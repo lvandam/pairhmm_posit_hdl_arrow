@@ -53,7 +53,7 @@ shared_ptr<arrow::Table> create_table_hapl(t_batch& batch)
 
 shared_ptr<arrow::Table> create_table_reads_reads(t_batch& batch)
 {
-        std::vector<t_bbase> reads = batch.read;
+        std::vector<t_bbase>& reads = batch.read;
         // char vector to string
         std::string read_string;
         for(t_bbase base : reads) {
