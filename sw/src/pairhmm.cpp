@@ -33,7 +33,7 @@
 #include "PairHMMUserCore.h"
 #include "pairhmm.hpp"
 
-// #include "debug_values.hpp"
+#include "debug_values.hpp"
 #include "utils.hpp"
 #include "batch.hpp"
 
@@ -124,14 +124,14 @@ int main(int argc, char ** argv)
         }
 
         PairHMMPosit pairhmm_posit(workload, show_results, show_table);
-        // PairHMMFloat<float> pairhmm_float(workload, show_results, show_table);
-        // PairHMMFloat<cpp_dec_float_50> pairhmm_dec50(workload, show_results, show_table);
-        //
+        PairHMMFloat<float> pairhmm_float(workload, show_results, show_table);
+        PairHMMFloat<cpp_dec_float_50> pairhmm_dec50(workload, show_results, show_table);
+
         if (calculate_sw) {
                 DEBUG_PRINT("Calculating on host...\n");
                 pairhmm_posit.calculate(batches);
-                //     pairhmm_float.calculate(batches);
-                //     pairhmm_dec50.calculate(batches);
+                pairhmm_float.calculate(batches);
+                pairhmm_dec50.calculate(batches);
         }
 
         // TODO for now, only first batch is supported
@@ -165,14 +165,14 @@ int main(int argc, char ** argv)
 
         int rc = 0;
         uint32_t num_rows = 32;
-        uint32_t * val_buf;
-        rc = posix_memalign((void * * ) & val_buf, BURST_LENGTH, sizeof(uint32_t) * num_rows);
+        uint32_t * result_hw;
+        rc = posix_memalign((void * * ) &result_hw, BURST_LENGTH, sizeof(uint32_t) * num_rows);
         // clear values buffer
         for (uint32_t i = 0; i < num_rows; i++) {
-                val_buf[i] = 0xDEADBEEF;
+                result_hw[i] = 0xDEADBEEF;
         }
         addr_lohi val;
-        val.full = (uint64_t) val_buf;
+        val.full = (uint64_t) result_hw;
         printf("Values buffer @ %016lX\n", val.full);
         platform->write_mmio(REG_RESULT_DATA_OFFSET, val.full);
 
@@ -191,15 +191,33 @@ int main(int argc, char ** argv)
 
         // Wait for last result
         do {
-          usleep(10);
+                usleep(10);
         }
-        while ((val_buf[15] == 0xDEADBEEF));
+        while ((result_hw[PIPE_DEPTH-1] == 0xDEADBEEF));
 
         // Get the number of matches from the UserCore
         for(int i = 0; i < num_rows; i++) {
-                cout << "RESULT: " << hex << val_buf[i] << endl;
+                cout << "RESULT: " << hex << result_hw[i] << endl;
         }
-        cout << endl;
+
+        // Check for errors with SW calculation
+        if (calculate_sw) {
+                DebugValues<posit<NBITS, ES> > hw_debug_values;
+
+                for (int i = 0; i < PIPE_DEPTH; i++) {
+                        // Store HW posit result for decimal accuracy calculation
+                        posit<NBITS, ES> res_hw;
+                        res_hw.set_raw_bits(result_hw[i]);
+                        hw_debug_values.debugValue(res_hw, "result[%d][0]", i);
+                }
+
+                writeBenchmark(pairhmm_dec50, pairhmm_float, pairhmm_posit, hw_debug_values,
+                               std::to_string(initial_constant_power) + ".txt", false, true);
+
+                int errs_posit = 0;
+                errs_posit = pairhmm_posit.count_errors((uint32_t *) result_hw);
+                DEBUG_PRINT("Posit errors: %d\n", errs_posit);
+        }
 
         return 0;
 }

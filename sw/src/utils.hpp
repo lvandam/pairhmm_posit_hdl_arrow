@@ -10,8 +10,8 @@
 #include <sys/time.h>
 #include <posit/posit>
 
-// #include "debug_values.hpp"
-// #include "pairhmm_float.hpp"
+#include "debug_values.hpp"
+#include "pairhmm_float.hpp"
 #include "pairhmm_posit.hpp"
 #include "defines.hpp"
 #include "batch.hpp"
@@ -21,9 +21,9 @@ using namespace sw::unum;
 
 cpp_dec_float_50 decimal_accuracy(cpp_dec_float_50 exact, cpp_dec_float_50 computed);
 
-// void writeBenchmark(PairHMMFloat<cpp_dec_float_50> &pairhmm_dec50, PairHMMFloat<float> &pairhmm_float,
-//                     PairHMMPosit &pairhmm_posit, DebugValues<posit<NBITS, ES>> &hw_debug_values,
-//                     std::string filename = "pairhmm_values.txt", bool printDate = true, bool overwrite = false);
+void writeBenchmark(PairHMMFloat<cpp_dec_float_50> &pairhmm_dec50, PairHMMFloat<float> &pairhmm_float,
+                    PairHMMPosit &pairhmm_posit, DebugValues<posit<NBITS, ES>> &hw_debug_values,
+                    std::string filename = "pairhmm_values.txt", bool printDate = true, bool overwrite = false);
 
 void print_batch_info(t_batch& batch);
 
