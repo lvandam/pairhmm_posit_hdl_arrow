@@ -171,24 +171,24 @@ int main(int argc, char ** argv)
         // TODO Temporary
         int rc = 0;
         uint32_t num_rows = 32;
-        uint32_t * off_buf;
+        // uint32_t * off_buf;
         uint32_t * val_buf;
-        rc = posix_memalign((void * * ) &off_buf, BURST_LENGTH, sizeof(uint32_t) * (num_rows + 1));
-        // clear offset buffer
-        for (uint32_t i = 0; i < num_rows + 1; i++) {
-                off_buf[i] = 0xDEADBEEF;
-        }
+        // rc = posix_memalign((void * * ) &off_buf, BURST_LENGTH, sizeof(uint32_t) * (num_rows + 1));
+        // // clear offset buffer
+        // for (uint32_t i = 0; i < num_rows + 1; i++) {
+        //         off_buf[i] = 0xDEADBEEF;
+        // }
         rc = posix_memalign((void * * ) &val_buf, BURST_LENGTH, sizeof(uint32_t) * num_rows);
         // clear values buffer
         for (uint32_t i = 0; i < num_rows; i++) {
                 val_buf[i] = 0x00000000;
         }
         addr_lohi off, val;
-        off.full = (uint64_t) off_buf;
+        // off.full = (uint64_t) off_buf;
         val.full = (uint64_t) val_buf;
-        printf("Offsets buffer @ %016lX\n", off.full);
+        // printf("Offsets buffer @ %016lX\n", off.full);
         printf("Values buffer @ %016lX\n", val.full);
-        platform->write_mmio(REG_RESULT_OFF_OFFSET, off.full);
+        // platform->write_mmio(REG_RESULT_OFF_OFFSET, off.full);
         platform->write_mmio(REG_RESULT_DATA_OFFSET, val.full);
         // TODO END Temporary
 
@@ -212,12 +212,22 @@ int main(int argc, char ** argv)
 
         // cout << "RESULT: " << hex << fpga_result << endl;
         for(int i = 0; i < 32; i++) {
-            cout << "RESULT: " << hex << (uint32_t)val_buf[i] << endl;
+            cout << "RESULT: " << hex << val_buf[i] << endl;
         }
         cout << endl;
 
         return 0;
 }
+
+
+
+
+
+
+
+
+
+
 
 // shared_ptr<arrow::Table> create_table_reads(const std::vector<uint8_t>& reads) {  // For struct column
 //         //

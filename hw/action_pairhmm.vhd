@@ -429,13 +429,23 @@ begin
   -- AXI Host Memory
   ----------------------------------------------------------------------
   -- Write channel tie off
-  -- axi_host_mem_awvalid <= '0';
-  -- axi_host_mem_wvalid  <= '0';
-  -- axi_host_mem_bready  <= '0';
+   axi_host_mem_bready  <= '1';
 
   -- Read channel defaults:
   axi_host_mem_arsize  <= "110";        -- 512 bit beats
   axi_host_mem_arburst <= "01";         -- incremental
+
+  -- Write channel defaults:
+  axi_host_mem_awsize           <= "110"; -- 512 bit beats
+  axi_host_mem_awburst          <= "01"; -- incremental
+
+  -- Not using any of these:
+  axi_host_mem_awid             <= (others => '0');
+  axi_host_mem_awlock           <= (others => '0');
+  axi_host_mem_awcache          <= "0010";
+  axi_host_mem_awprot           <= "000";
+  axi_host_mem_awqos            <= x"0";
+  axi_host_mem_awuser           <= (others => '0');
 
   -- Not using any of these:
   axi_host_mem_arid    <= (others => '0');
