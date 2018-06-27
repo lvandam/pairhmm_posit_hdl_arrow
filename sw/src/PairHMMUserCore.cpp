@@ -15,6 +15,8 @@
 #include <stdexcept>
 
 #include "PairHMMUserCore.h"
+#include "defines.hpp"
+#include "utils.hpp"
 
 using namespace fletcher;
 
@@ -29,53 +31,74 @@ PairHMMUserCore::PairHMMUserCore(std::shared_ptr<fletcher::FPGAPlatform> platfor
         done_status_mask = 0x0000000000000003;// 0x000000000000FFFF;
 }
 
-void PairHMMUserCore::set_batch_init(t_inits& init, uint32_t xlen, uint32_t ylen) {
-    // X len & Y len
-    reg_conv_t xlen_ylen;
-    xlen_ylen.half.hi = xlen;
-    xlen_ylen.half.lo = ylen;
-    this->platform()->write_mmio(REG_XLEN_YLEN_OFFSET, xlen_ylen.full);
+void PairHMMUserCore::set_batch_offsets(std::vector<uint32_t>& offsets) {
+        for (int i = 0; i < MAX_CORES / 2; i++) {
+            reg_conv_t reg;
 
-    // X size & Y size
-    reg_conv_t x_y;
-    x_y.half.hi = init.x_size;
-    x_y.half.lo = init.y_size;
-    this->platform()->write_mmio(REG_X_Y_OFFSET, x_y.full);
+            if(i < CORES) {
+                reg.half.hi = offsets[2 * i];
+                reg.half.lo = offsets[2 * i + 1];
+            } else {
+                reg.half.hi = 0x00000000;
+                reg.half.lo = 0x00000000;
+            }
 
-    // X padded size & Y padded size
-    reg_conv_t xp_yp;
-    xp_yp.half.hi = init.x_padded;
-    xp_yp.half.lo = init.y_padded;
-    this->platform()->write_mmio(REG_XP_YP_OFFSET, xp_yp.full);
-
-    // X BP padded size
-    reg_conv_t xbpp_initial;
-    xbpp_initial.half.hi = init.x_bppadded;
-    xbpp_initial.half.lo = init.initials[0];
-    this->platform()->write_mmio(REG_XBPP_INITIAL_OFFSET, xbpp_initial.full);
+            this->platform()->write_mmio(REG_BATCH_OFFSET + i, reg.full);
+        }
 }
 
-void PairHMMUserCore::get_matches(std::vector<uint32_t>& matches)
-{
-        int np = matches.size();
+void PairHMMUserCore::set_batch_init(t_inits& init, uint32_t xlen, uint32_t ylen) {
+    // For now, duplicate batch information across all core MMIO registers
+    uint32_t xlens[CORES], ylens[CORES], xsizes[CORES], ysizes[CORES], x_paddeds[CORES], y_paddeds[CORES], xbpps[CORES], initials[CORES];
+    for (int i = 0; i < roundToMultiple(CORES, 2); i++) {
+        xlens[i] = xlen;
+        ylens[i] = ylen;
+        xsizes[i] = init.x_size;
+        ysizes[i] = init.y_size;
+        x_paddeds[i] = init.x_padded;
+        y_paddeds[i] = init.y_padded;
+        xbpps[i] = init.x_bppadded;
+        initials[i] = init.initials[0];
+    }
 
-        reg_conv_t conv;
-        this->platform()->read_mmio(REG_RESULT_OFFSET, &conv.full);
-        matches[0] += conv.half.hi;
-        matches[1] += conv.half.lo;
+    for (int i = 0; i < (int)ceil((float)CORES / 2); i++) {
+        reg_conv_t reg;
+
+        reg.half.hi = xlens[2 * i];
+        reg.half.lo = xlens[2 * i + 1];
+        this->platform()->write_mmio(REG_XLEN_OFFSET + i, reg.full);
+
+        reg.half.hi = ylens[2 * i];
+        reg.half.lo = ylens[2 * i + 1];
+        this->platform()->write_mmio(REG_YLEN_OFFSET + i, reg.full);
+
+        reg.half.hi = xsizes[2 * i];
+        reg.half.lo = xsizes[2 * i + 1];
+        this->platform()->write_mmio(REG_X_OFFSET + i, reg.full);
+
+        reg.half.hi = ysizes[2 * i];
+        reg.half.lo = ysizes[2 * i + 1];
+        this->platform()->write_mmio(REG_Y_OFFSET + i, reg.full);
+
+        reg.half.hi = x_paddeds[2 * i];
+        reg.half.lo = x_paddeds[2 * i + 1];
+        this->platform()->write_mmio(REG_XP_OFFSET + i, reg.full);
+
+        reg.half.hi = y_paddeds[2 * i];
+        reg.half.lo = y_paddeds[2 * i + 1];
+        this->platform()->write_mmio(REG_YP_OFFSET + i, reg.full);
+
+        reg.half.hi = xbpps[2 * i];
+        reg.half.lo = xbpps[2 * i + 1];
+        this->platform()->write_mmio(REG_XBPP_OFFSET + i, reg.full);
+
+        reg.half.hi = initials[2 * i];
+        reg.half.lo = initials[2 * i + 1];
+        this->platform()->write_mmio(REG_INITIAL_OFFSET + i, reg.full);
+    }
 }
 
 void PairHMMUserCore::control_zero()
 {
         this->platform()->write_mmio(REG_CONTROL_OFFSET, 0x00000000);
 }
-
-void PairHMMUserCore::get_result(uint32_t& result)
-{
-        reg_conv_t conv;
-        this->platform()->read_mmio(REG_RESULT_OFFSET, &conv.full);
-        result = conv.half.lo;
-}
-
-
-// write_mmio

@@ -37,4 +37,6 @@ t_workload *gen_workload(unsigned long pairs, unsigned long fixedX, unsigned lon
 
 void copyProbBytes(t_probs& probs, uint8_t bytesArray[]);
 
+int roundToMultiple(int toRound, int multiple);
+
 #endif //__UTILS_H

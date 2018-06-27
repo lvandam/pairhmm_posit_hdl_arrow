@@ -21,18 +21,26 @@
 
 #include "batch.hpp"
 
-#define REUC_TOTAL_UNITS   1
+#define CORES   1
+#define MAX_CORES 8
 
 #define REG_CONTROL_OFFSET  1
 
-// #define REG_RESULT_OFF_OFFSET 8
 #define REG_RESULT_DATA_OFFSET 8
 
-#define REG_XLEN_YLEN_OFFSET 9
-#define REG_X_Y_OFFSET 10
-#define REG_XP_YP_OFFSET 11
-#define REG_XBPP_INITIAL_OFFSET 12
-#define REG_RESULT_OFFSET 13
+#define REG_BATCH_OFFSET 9
+
+#define REG_XLEN_OFFSET 13
+#define REG_YLEN_OFFSET 17
+
+#define REG_X_OFFSET 21
+#define REG_Y_OFFSET 25
+
+#define REG_XP_OFFSET 29
+#define REG_YP_OFFSET 33
+
+#define REG_XBPP_OFFSET 37
+#define REG_INITIAL_OFFSET 41
 
 /**
  * \class PairHMMUserCore
@@ -47,19 +55,12 @@ public:
  */
 PairHMMUserCore(std::shared_ptr<fletcher::FPGAPlatform> platform);
 
-void set_batch_init(t_inits& init, uint32_t xlen, uint32_t ylen);
+void set_batch_offsets(std::vector<uint32_t>& offsets);
 
-/**
- * \brief Get the number of matches from the units.
- */
-void get_matches(std::vector<uint32_t>& matches);
+void set_batch_init(t_inits& init, uint32_t xlen, uint32_t ylen);
 
 void control_zero();
 
-/**
- * \brief Get the result from FPGA
- */
-void get_result(uint32_t& result);
 private:
 
 

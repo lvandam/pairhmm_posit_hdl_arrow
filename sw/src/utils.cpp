@@ -199,3 +199,8 @@ void copyProbBytes(t_probs& probs, uint8_t bytesArray[]) {
                 bytesArray[pos++] = probs.p[i].x[3];
         }
 }
+
+int roundToMultiple(int toRound, int multiple) {
+    toRound += multiple / 2;
+    return toRound - (toRound%multiple);
+}

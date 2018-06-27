@@ -72,9 +72,6 @@ int main(int argc, char ** argv)
 
         flush(cout);
 
-        // Result
-        uint32_t fpga_result;
-
         uint32_t first_index = 0;
         uint32_t last_index = 1;
 
@@ -181,6 +178,15 @@ int main(int argc, char ** argv)
 
         // Run
         uc.set_batch_init(batches[0].init, 6, 6); // Correctly convert x and y to uint32_t
+
+        std::vector<uint32_t> batch_offsets;
+        batch_offsets.reserve(CORES);
+        for(int i = 0; i < roundToMultiple(CORES, 2); i++) {
+            // For now, same amount of batches for all cores
+            batch_offsets[i] = i * workload->batches;
+        }
+        uc.set_batch_offsets(batch_offsets);
+
         uc.start();
 
 #ifdef DEBUG
