@@ -46,7 +46,7 @@
 #endif
 
 /* Burst step length in bytes */
-#define BURST_LENGTH    16
+#define BURST_LENGTH 32
 
 using namespace std;
 
@@ -69,14 +69,13 @@ addr_lohi;
 int main(int argc, char ** argv)
 {
         srand(0);
-
         flush(cout);
-
-        uint32_t first_index = 0;
-        uint32_t last_index = 1;
 
         t_workload *workload;
         std::vector<t_batch> batches;
+
+        int rc = 0;
+        uint32_t num_rows = BATCHES_PER_CORE * PIPE_DEPTH;
 
         unsigned long pairs, x, y = 0;
         int initial_constant_power = 1;
@@ -131,15 +130,22 @@ int main(int argc, char ** argv)
                 pairhmm_dec50.calculate(batches);
         }
 
-        // TODO for now, only first batch is supported
         // Make a table with haplotypes
-        shared_ptr<arrow::Table> table_hapl = create_table_hapl(batches[0]);
-
+        shared_ptr<arrow::Table> table_hapl = create_table_hapl(batches);
         // Create the read and probabilities columns
-        shared_ptr<arrow::Table> table_reads_reads = create_table_reads_reads(batches[0]);
-        shared_ptr<arrow::Table> table_reads_probs = create_table_reads_probs(batches[0]);
+        shared_ptr<arrow::Table> table_reads_reads = create_table_reads_reads(batches);
+        shared_ptr<arrow::Table> table_reads_probs = create_table_reads_probs(batches);
+        // Create arrays for results to be written to (per SA core)
+        std::vector<uint32_t *> result_hw(roundToMultiple(CORES, 2));
+        for(int i = 0; i < roundToMultiple(CORES, 2); i++) {
+                rc = posix_memalign((void * * ) &(result_hw[i]), BURST_LENGTH, sizeof(uint32_t) * num_rows);
+                // clear values buffer
+                for (uint32_t j = 0; j < num_rows; j++) {
+                        result_hw[i][j] = 0xDEADBEEF;
+                }
+        }
 
-        // Match on FPGA
+        // Calculate on FPGA
         // Create a platform
 #if (PLATFORM == 0)
         shared_ptr<fletcher::EchoPlatform> platform(new fletcher::EchoPlatform());
@@ -160,33 +166,37 @@ int main(int argc, char ** argv)
         // Create a UserCore
         PairHMMUserCore uc(static_pointer_cast<fletcher::FPGAPlatform>(platform));
 
-        int rc = 0;
-        uint32_t num_rows = 32;
-        uint32_t * result_hw;
-        rc = posix_memalign((void * * ) &result_hw, BURST_LENGTH, sizeof(uint32_t) * num_rows);
-        // clear values buffer
-        for (uint32_t i = 0; i < num_rows; i++) {
-                result_hw[i] = 0xDEADBEEF;
-        }
-        addr_lohi val;
-        val.full = (uint64_t) result_hw;
-        printf("Values buffer @ %016lX\n", val.full);
-        platform->write_mmio(REG_RESULT_DATA_OFFSET, val.full);
-
-        // Reset it
+        // Reset UserCore
         uc.reset();
 
-        // Run
-        uc.set_batch_init(batches[0].init, 6, 6); // Correctly convert x and y to uint32_t
+        // Write result buffer addresses
+        for(int i = 0; i < roundToMultiple(CORES, 2); i++) {
+                addr_lohi val;
+                val.full = (uint64_t) result_hw[i];
+                platform->write_mmio(REG_RESULT_DATA_OFFSET + i, val.full);
+        }
+
+        // Configure the pair HMM SA cores
+        std::vector<t_inits> inits(roundToMultiple(CORES, 2));
+        std::vector<uint32_t> x_len(roundToMultiple(CORES, 2)), y_len(roundToMultiple(CORES, 2));
+        for(int i = 0; i < roundToMultiple(CORES, 2); i++) {
+                // For now, duplicate batch information across all core MMIO registers
+                inits[i] = batches[0].init;
+                x_len[i] = workload->by[0];
+                y_len[i] = workload->by[0];
+        }
+
+        uc.set_batch_init(inits, x_len, y_len);
 
         std::vector<uint32_t> batch_offsets;
         batch_offsets.reserve(CORES);
         for(int i = 0; i < roundToMultiple(CORES, 2); i++) {
-            // For now, same amount of batches for all cores
-            batch_offsets[i] = i * workload->batches;
+                // For now, same amount of batches for all cores
+                batch_offsets[i] = i * workload->batches;
         }
         uc.set_batch_offsets(batch_offsets);
 
+        // Run
         uc.start();
 
 #ifdef DEBUG
@@ -195,25 +205,33 @@ int main(int argc, char ** argv)
         uc.wait_for_finish(10);
 #endif
 
-        // Wait for last result
+        // Wait for last result of first SA core
         do {
                 usleep(10);
         }
-        while ((result_hw[PIPE_DEPTH-1] == 0xDEADBEEF));
+        while ((result_hw[0][num_rows-1] == 0xDEADBEEF));
 
         // Get the number of matches from the UserCore
-        for(int i = 0; i < num_rows; i++) {
-                cout << "RESULT: " << hex << result_hw[i] << endl;
+        for(int i = 0; i < roundToMultiple(CORES, 2); i++) {
+                cout << "==================================" << endl;
+                cout << "== CORE " << i << endl;
+                cout << "==================================" << endl;
+                for(int j = 0; j < num_rows; j++) {
+                        cout << dec << j <<": " << hex << result_hw[i][j] << dec <<endl;
+                }
+                cout << "==================================" << endl;
+                cout << endl;
         }
 
         // Check for errors with SW calculation
+        // TODO for now only check the first core results
         if (calculate_sw) {
                 DebugValues<posit<NBITS, ES> > hw_debug_values;
 
-                for (int i = 0; i < PIPE_DEPTH; i++) {
+                for (int i = 0; i < num_rows; i++) {
                         // Store HW posit result for decimal accuracy calculation
                         posit<NBITS, ES> res_hw;
-                        res_hw.set_raw_bits(result_hw[i]);
+                        res_hw.set_raw_bits(result_hw[0][i]);
                         hw_debug_values.debugValue(res_hw, "result[%d][0]", i);
                 }
 
@@ -221,9 +239,12 @@ int main(int argc, char ** argv)
                                std::to_string(initial_constant_power) + ".txt", false, true);
 
                 int errs_posit = 0;
-                errs_posit = pairhmm_posit.count_errors((uint32_t *) result_hw);
+                errs_posit = pairhmm_posit.count_errors((uint32_t *) (result_hw[0]));
                 DEBUG_PRINT("Posit errors: %d\n", errs_posit);
         }
+
+        // Reset UserCore
+        uc.reset();
 
         return 0;
 }

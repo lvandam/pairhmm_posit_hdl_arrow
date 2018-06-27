@@ -47,53 +47,40 @@ void PairHMMUserCore::set_batch_offsets(std::vector<uint32_t>& offsets) {
         }
 }
 
-void PairHMMUserCore::set_batch_init(t_inits& init, uint32_t xlen, uint32_t ylen) {
-    // For now, duplicate batch information across all core MMIO registers
-    uint32_t xlens[CORES], ylens[CORES], xsizes[CORES], ysizes[CORES], x_paddeds[CORES], y_paddeds[CORES], xbpps[CORES], initials[CORES];
-    for (int i = 0; i < roundToMultiple(CORES, 2); i++) {
-        xlens[i] = xlen;
-        ylens[i] = ylen;
-        xsizes[i] = init.x_size;
-        ysizes[i] = init.y_size;
-        x_paddeds[i] = init.x_padded;
-        y_paddeds[i] = init.y_padded;
-        xbpps[i] = init.x_bppadded;
-        initials[i] = init.initials[0];
-    }
-
+void PairHMMUserCore::set_batch_init(std::vector<t_inits>& init, std::vector<uint32_t>& xlen, std::vector<uint32_t>& ylen) {
     for (int i = 0; i < (int)ceil((float)CORES / 2); i++) {
         reg_conv_t reg;
 
-        reg.half.hi = xlens[2 * i];
-        reg.half.lo = xlens[2 * i + 1];
+        reg.half.hi = xlen[2 * i];
+        reg.half.lo = xlen[2 * i + 1];
         this->platform()->write_mmio(REG_XLEN_OFFSET + i, reg.full);
 
-        reg.half.hi = ylens[2 * i];
-        reg.half.lo = ylens[2 * i + 1];
+        reg.half.hi = ylen[2 * i];
+        reg.half.lo = ylen[2 * i + 1];
         this->platform()->write_mmio(REG_YLEN_OFFSET + i, reg.full);
 
-        reg.half.hi = xsizes[2 * i];
-        reg.half.lo = xsizes[2 * i + 1];
+        reg.half.hi = init[2 * i].x_size;
+        reg.half.lo = init[2 * i + 1].x_size;
         this->platform()->write_mmio(REG_X_OFFSET + i, reg.full);
 
-        reg.half.hi = ysizes[2 * i];
-        reg.half.lo = ysizes[2 * i + 1];
+        reg.half.hi = init[2 * i].y_size;
+        reg.half.lo = init[2 * i + 1].y_size;
         this->platform()->write_mmio(REG_Y_OFFSET + i, reg.full);
 
-        reg.half.hi = x_paddeds[2 * i];
-        reg.half.lo = x_paddeds[2 * i + 1];
+        reg.half.hi = init[2 * i].x_padded;
+        reg.half.lo = init[2 * i + 1].x_padded;
         this->platform()->write_mmio(REG_XP_OFFSET + i, reg.full);
 
-        reg.half.hi = y_paddeds[2 * i];
-        reg.half.lo = y_paddeds[2 * i + 1];
+        reg.half.hi = init[2 * i].y_padded;
+        reg.half.lo = init[2 * i + 1].y_padded;
         this->platform()->write_mmio(REG_YP_OFFSET + i, reg.full);
 
-        reg.half.hi = xbpps[2 * i];
-        reg.half.lo = xbpps[2 * i + 1];
+        reg.half.hi = init[2 * i].x_bppadded;
+        reg.half.lo = init[2 * i + 1].x_bppadded;
         this->platform()->write_mmio(REG_XBPP_OFFSET + i, reg.full);
 
-        reg.half.hi = initials[2 * i];
-        reg.half.lo = initials[2 * i + 1];
+        reg.half.hi = init[2 * i].initials[0];
+        reg.half.lo = init[2 * i + 1].initials[0];
         this->platform()->write_mmio(REG_INITIAL_OFFSET + i, reg.full);
     }
 }

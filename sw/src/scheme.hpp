@@ -10,7 +10,6 @@
 
 using namespace std;
 
-shared_ptr<arrow::Table> create_table_hapl(t_batch& batch);
-shared_ptr<arrow::Table> create_table_reads_reads(t_batch& batch);
-shared_ptr<arrow::Table> create_table_reads_probs(t_batch& batch);
-shared_ptr<arrow::Table> create_table_result();
+shared_ptr<arrow::Table> create_table_hapl(std::vector<t_batch>& batches);
+shared_ptr<arrow::Table> create_table_reads_reads(std::vector<t_batch>& batches);
+shared_ptr<arrow::Table> create_table_reads_probs(std::vector<t_batch>& batches);

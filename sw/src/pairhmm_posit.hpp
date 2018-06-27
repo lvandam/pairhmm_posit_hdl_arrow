@@ -134,7 +134,6 @@ public:
         int i = 0;
             for (int j = 0; j < PIPE_DEPTH; j++) {
                 swp = result_sw[i * PIPE_DEPTH + j][0];
-                // hwp.set_raw_bits(hr[i * 4 * PIPE_DEPTH + j * 4]);
                 hwp.set_raw_bits(hr[i * PIPE_DEPTH + j]);
 
                 posit<NBITS, ES> err = swp / hwp;

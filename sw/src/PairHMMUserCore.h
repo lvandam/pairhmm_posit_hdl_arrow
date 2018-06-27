@@ -23,24 +23,25 @@
 
 #define CORES   1
 #define MAX_CORES 8
+#define BATCHES_PER_CORE 2
 
 #define REG_CONTROL_OFFSET  1
 
 #define REG_RESULT_DATA_OFFSET 8
 
-#define REG_BATCH_OFFSET 9
+#define REG_BATCH_OFFSET 16
 
-#define REG_XLEN_OFFSET 13
-#define REG_YLEN_OFFSET 17
+#define REG_XLEN_OFFSET 20
+#define REG_YLEN_OFFSET 24
 
-#define REG_X_OFFSET 21
-#define REG_Y_OFFSET 25
+#define REG_X_OFFSET 28
+#define REG_Y_OFFSET 32
 
-#define REG_XP_OFFSET 29
-#define REG_YP_OFFSET 33
+#define REG_XP_OFFSET 36
+#define REG_YP_OFFSET 40
 
-#define REG_XBPP_OFFSET 37
-#define REG_INITIAL_OFFSET 41
+#define REG_XBPP_OFFSET 44
+#define REG_INITIAL_OFFSET 48
 
 /**
  * \class PairHMMUserCore
@@ -57,7 +58,7 @@ PairHMMUserCore(std::shared_ptr<fletcher::FPGAPlatform> platform);
 
 void set_batch_offsets(std::vector<uint32_t>& offsets);
 
-void set_batch_init(t_inits& init, uint32_t xlen, uint32_t ylen);
+void set_batch_init(std::vector<t_inits>& init, std::vector<uint32_t>& xlen, std::vector<uint32_t>& ylen);
 
 void control_zero();
 
