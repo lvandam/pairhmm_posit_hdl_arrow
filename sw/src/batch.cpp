@@ -30,7 +30,7 @@ posit<NBITS, ES> random_number(float offset, float dev) {
     return posit<NBITS, ES>(num_float);
 }
 
-void fill_batch(t_batch& batch, int x, int y, float initial) {
+void fill_batch(t_batch& batch, int batch_num, int x, int y, float initial) {
     t_inits& init = batch.init;
     std::vector<t_bbase>& read = batch.read;
     std::vector<t_bbase>& hapl = batch.hapl;
@@ -72,11 +72,11 @@ void fill_batch(t_batch& batch, int x, int y, float initial) {
     }
 
     for (int i = 0; i < xp + x - 1; i++) {
-        read[i].base = XDATA[i];
+        read[i].base = XDATA[batch_num * (xp + x - 1) + i];
     }
 
     for (int i = 0; i < yp + y - 1; i++) {
-        hapl[i].base = YDATA[i];
+        hapl[i].base = YDATA[batch_num * (yp + y - 1) + i];
     }
 
     for (int i = 0; i < xp + x - 1; i++) {

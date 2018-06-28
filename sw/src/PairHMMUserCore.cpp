@@ -25,10 +25,10 @@ PairHMMUserCore::PairHMMUserCore(std::shared_ptr<fletcher::FPGAPlatform> platfor
 {
         // Some settings that are different from standard implementation
         // concerning start, reset and status register.
-        ctrl_start       = 0x0000000000000001;// 0x00000000000000FF;
-        ctrl_reset       = 0x0000000000000002;// 0x000000000000FF00;
-        done_status      = 0x0000000000000002;// 0x000000000000FF00;
-        done_status_mask = 0x0000000000000003;// 0x000000000000FFFF;
+        ctrl_start       = 0x0000000000000003;// 0x00000000000000FF;
+        ctrl_reset       = 0x000000000000000C;// 0x000000000000FF00;
+        done_status      = 0x000000000000000C;// 0x000000000000FF00;
+        done_status_mask = 0x000000000000000C;// 0x000000000000FFFF;
 }
 
 void PairHMMUserCore::set_batch_offsets(std::vector<uint32_t>& offsets) {

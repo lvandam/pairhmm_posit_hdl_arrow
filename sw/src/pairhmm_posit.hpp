@@ -9,6 +9,7 @@
 #include <vector>
 #include <posit/posit>
 
+#include "PairHMMUserCore.h"
 #include "debug_values.hpp"
 #include "defines.hpp"
 #include "utils.hpp"
@@ -62,9 +63,9 @@ public:
                     result_sw_i[i * PIPE_DEPTH + j][0] += I[x][c];
                 }
 
-                result_sw[i*PIPE_DEPTH+j][0] = result_sw_m[i * PIPE_DEPTH + j][0] + result_sw_i[i * PIPE_DEPTH + j][0];
+                result_sw[i * PIPE_DEPTH + j][0] = result_sw_m[i * PIPE_DEPTH + j][0] + result_sw_i[i * PIPE_DEPTH + j][0];
 
-                debug_values.debugValue(result_sw[i * PIPE_DEPTH + j][0], "result[%d][0]", (i * PIPE_DEPTH + j));
+                debug_values.debugValue(result_sw[i * PIPE_DEPTH + j][0], "result[%d][%d]", i, j);
 
                 if (show_table) {
                     print_mid_table(batches[i], j, x, y, M, I, D);
@@ -126,15 +127,17 @@ public:
         }
     } // calculate_mids
 
-    int count_errors(uint32_t *hr) {
+    int count_errors(std::vector<uint32_t *>& hr) {
         int total_errors = 0;
         posit<NBITS, ES> hwp, swp;
 
-        // for (int i = 0; i < workload->batches; i++) { // TODO
-        int i = 0;
+        for (int i = 0; i < workload->batches; i++) {
+            int core_index = floor((float)i / BATCHES_PER_CORE);
+            int core_batch = BATCHES_PER_CORE - i % BATCHES_PER_CORE - 1;
+
             for (int j = 0; j < PIPE_DEPTH; j++) {
                 swp = result_sw[i * PIPE_DEPTH + j][0];
-                hwp.set_raw_bits(hr[i * PIPE_DEPTH + j]);
+                hwp.set_raw_bits(hr[core_index][core_batch * PIPE_DEPTH + j]);
 
                 posit<NBITS, ES> err = swp / hwp;
 
@@ -143,9 +146,9 @@ public:
                     cout << "SW: " << hexstring(swp.collect()) << ", HW: " << hexstring(hwp.collect()) << endl;
                 }
             }
-        // }
+        }
 
-        return (total_errors);
+        return total_errors;
     } // count_errors
 
     void print_mid_table(t_batch& batch, int pair, int r, int c, t_matrix& M, t_matrix& I, t_matrix& D) {
@@ -238,6 +241,5 @@ public:
         cout << endl;
     } // print_results
 };
-
 
 #endif //PAIRHMM_PAIRHMM_POSIT_HPP

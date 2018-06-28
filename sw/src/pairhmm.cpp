@@ -115,7 +115,7 @@ int main(int argc, char ** argv)
 
         batches = std::vector<t_batch>(workload->batches);
         for (int q = 0; q < workload->batches; q++) {
-                fill_batch(batches[q], workload->bx[q], workload->by[q], powf(2.0, initial_constant_power));
+                fill_batch(batches[q], q, workload->bx[q], workload->by[q], powf(2.0, initial_constant_power)); // HW unit starts with last batch
                 print_batch_info(batches[q]);
         }
 
@@ -138,7 +138,7 @@ int main(int argc, char ** argv)
         // Create arrays for results to be written to (per SA core)
         std::vector<uint32_t *> result_hw(roundToMultiple(CORES, 2));
         for(int i = 0; i < roundToMultiple(CORES, 2); i++) {
-                rc = posix_memalign((void * * ) &(result_hw[i]), BURST_LENGTH, sizeof(uint32_t) * num_rows);
+                rc = posix_memalign((void * * ) &(result_hw[i]), BURST_LENGTH * roundToMultiple(CORES, 2), sizeof(uint32_t) * num_rows);
                 // clear values buffer
                 for (uint32_t j = 0; j < num_rows; j++) {
                         result_hw[i][j] = 0xDEADBEEF;
@@ -189,10 +189,10 @@ int main(int argc, char ** argv)
         uc.set_batch_init(inits, x_len, y_len);
 
         std::vector<uint32_t> batch_offsets;
-        batch_offsets.reserve(CORES);
+        batch_offsets.reserve(roundToMultiple(CORES, 2));
         for(int i = 0; i < roundToMultiple(CORES, 2); i++) {
                 // For now, same amount of batches for all cores
-                batch_offsets[i] = i * workload->batches;
+                batch_offsets[i] = i * BATCHES_PER_CORE;
         }
         uc.set_batch_offsets(batch_offsets);
 
@@ -205,14 +205,14 @@ int main(int argc, char ** argv)
         uc.wait_for_finish(10);
 #endif
 
-        // Wait for last result of first SA core
+        // Wait for last result of last SA core
         do {
                 usleep(10);
         }
-        while ((result_hw[0][num_rows-1] == 0xDEADBEEF));
+        while ((result_hw[CORES - 1][num_rows - 1] == 0xDEADBEEF));
 
         // Get the number of matches from the UserCore
-        for(int i = 0; i < roundToMultiple(CORES, 2); i++) {
+        for(int i = 0; i < CORES; i++) {
                 cout << "==================================" << endl;
                 cout << "== CORE " << i << endl;
                 cout << "==================================" << endl;
@@ -224,22 +224,25 @@ int main(int argc, char ** argv)
         }
 
         // Check for errors with SW calculation
-        // TODO for now only check the first core results
         if (calculate_sw) {
                 DebugValues<posit<NBITS, ES> > hw_debug_values;
 
-                for (int i = 0; i < num_rows; i++) {
-                        // Store HW posit result for decimal accuracy calculation
-                        posit<NBITS, ES> res_hw;
-                        res_hw.set_raw_bits(result_hw[0][i]);
-                        hw_debug_values.debugValue(res_hw, "result[%d][0]", i);
+                for (int c = 0; c < CORES; c++) {
+                    for (int i = 0; i < BATCHES_PER_CORE; i++) {
+                            for(int j = 0; j < PIPE_DEPTH; j++) {
+                                // Store HW posit result for decimal accuracy calculation
+                                posit<NBITS, ES> res_hw;
+                                res_hw.set_raw_bits(result_hw[c][i * PIPE_DEPTH + j]);
+                                hw_debug_values.debugValue(res_hw, "result[%d][%d]", c * BATCHES_PER_CORE + (BATCHES_PER_CORE - i - 1), j);
+                            }
+                    }
                 }
 
                 writeBenchmark(pairhmm_dec50, pairhmm_float, pairhmm_posit, hw_debug_values,
                                std::to_string(initial_constant_power) + ".txt", false, true);
 
                 int errs_posit = 0;
-                errs_posit = pairhmm_posit.count_errors((uint32_t *) (result_hw[0]));
+                errs_posit = pairhmm_posit.count_errors(result_hw);
                 DEBUG_PRINT("Posit errors: %d\n", errs_posit);
         }
 
