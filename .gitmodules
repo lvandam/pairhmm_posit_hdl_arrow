@@ -1,0 +1,9 @@
+[submodule "posit_arith_hdl"]
+	path = posit
+	url = https://github.com/lvandam/posit_arith_hdl
+[submodule "fletcher"]
+	path = fletcher
+	url = https://github.com/lvandam/fletcher
+[submodule "hw/pairhmm_sa"]
+	path = hw/pairhmm_sa
+	url = https://github.com/lvandam/pairhmm_sa
