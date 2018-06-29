@@ -9,9 +9,18 @@ use work.pairhmm_package.all;
 use work.pe_package.all;
 
 package cu_snap_package is
+
+  constant PAIRHMM_MAX_SIZE : natural       := 64;
+  type bp_array_type is array (0 to PAIRHMM_MAX_SIZE-1) of bp_type;
+
+  constant bp_array_empty   : bp_array_type := (others => BP_IGNORE);
+  type bp_all_type is array (0 to PE_DEPTH-1) of bp_array_type;
+
+  constant bp_all_empty     : bp_all_type   := (others => bp_array_empty);
+
   constant CU_MAX_CYCLES          : natural := PAIRHMM_MAX_SIZE / PE_DEPTH * 2 * PAIRHMM_MAX_SIZE;
   constant CU_CYCLE_BITS          : natural := log2(CU_MAX_CYCLES);
-  constant CU_BPS_PER_RAM_ADDR    : natural := 1024 / (8 * PE_DEPTH);
+  constant CU_BPS_PER_RAM_ADDR    : natural := 1; -- 1024 / (8 * PE_DEPTH); -- TODO: Correct?
   constant CU_RAM_ADDRS_PER_BATCH : natural := PAIRHMM_MAX_SIZE / CU_BPS_PER_RAM_ADDR;
   constant CU_RESULT_SIZE         : natural := 4 * PE_DW;
 ----------------------------------------------------------------------------------------------------------------------- internals
@@ -58,7 +67,7 @@ package cu_snap_package is
     addra : unsigned(6 downto 0);
     dina  : std_logic_vector(BP_SIZE - 1 downto 0);
     clkb  : std_logic;
-    addrb : unsigned(9 downto 0);
+    addrb : unsigned(8 downto 0);
     doutb : std_logic_vector(3 * PE_DEPTH - 1 downto 0);
   end record;
 
@@ -68,7 +77,7 @@ package cu_snap_package is
     addra : unsigned(6 downto 0);
     dina  : std_logic_vector(PAIRHMM_BITS_PER_PROB - 1 downto 0);
     clkb  : std_logic;
-    addrb : unsigned(9 downto 0);
+    addrb : unsigned(8 downto 0);
     doutb : std_logic_vector(PE_DEPTH * PAIRHMM_BITS_PER_PROB - 1 downto 0);
   end record;
 

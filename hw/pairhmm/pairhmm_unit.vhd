@@ -1266,11 +1266,11 @@ begin
   re.probram.wea <= r.prob_wren;
 
   -- Connect addresses to read from haplotype
-  re.haplram.addrb <= u(int(rs.element) + int(rs.supercolumn) * PAIRHMM_NUM_PES + 64 * int(u(rs.ram)), 10);
+  re.haplram.addrb <= u(int(rs.element) + int(rs.supercolumn) * PAIRHMM_NUM_PES + PAIRHMM_MAX_SIZE * int(u(rs.ram)), 9);
 
   -- Connect addresses to read from read
-  re.readram.addrb <= u(int(rs.basepair) + 64 * int(u(rs.ram)), 10);
-  re.probram.addrb <= u(int(rs.basepair) + 64 * int(u(rs.ram)), 10);
+  re.readram.addrb <= u(int(rs.basepair) + PAIRHMM_MAX_SIZE * int(u(rs.ram)), 9);
+  re.probram.addrb <= u(int(rs.basepair) + PAIRHMM_MAX_SIZE * int(u(rs.ram)), 9);
 
   -- Haplotype RAM
   hapl_ram : base_ram generic map (
@@ -1278,8 +1278,8 @@ begin
     SIZEA      => 128,
     ADDRWIDTHA => 7,
     WIDTHB     => 48,
-    SIZEB      => 64,
-    ADDRWIDTHB => 10
+    SIZEB      => 128,
+    ADDRWIDTHB => 9
     ) port map (
       clkA  => re.haplram.clka,
       weA   => re.haplram.wea,
@@ -1296,8 +1296,8 @@ begin
     SIZEA      => 128,
     ADDRWIDTHA => 7,
     WIDTHB     => 48,
-    SIZEB      => 64,
-    ADDRWIDTHB => 10
+    SIZEB      => 128,
+    ADDRWIDTHB => 9
     ) port map (
       clkA  => re.readram.clka,
       weA   => re.readram.wea,
@@ -1314,8 +1314,8 @@ begin
     SIZEA      => 128,
     ADDRWIDTHA => 7,
     WIDTHB     => 4096, -- 16*8*32
-    SIZEB      => 64,
-    ADDRWIDTHB => 10
+    SIZEB      => 128,
+    ADDRWIDTHB => 9
     ) port map (
       clkA  => re.probram.clka,
       weA   => re.probram.wea,
