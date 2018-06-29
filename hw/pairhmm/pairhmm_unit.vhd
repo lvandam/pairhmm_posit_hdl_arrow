@@ -1275,7 +1275,7 @@ begin
   -- Haplotype RAM
   hapl_ram : base_ram generic map (
     WIDTHA     => BP_SIZE,
-    SIZEA      => 256,
+    SIZEA      => 128,
     ADDRWIDTHA => 7,
     WIDTHB     => 48,
     SIZEB      => 64,
@@ -1293,7 +1293,7 @@ begin
   -- Read RAM
   read_ram : base_ram generic map (
     WIDTHA     => BP_SIZE,
-    SIZEA      => 256,
+    SIZEA      => 128,
     ADDRWIDTHA => 7,
     WIDTHB     => 48,
     SIZEB      => 64,
@@ -1311,7 +1311,7 @@ begin
   -- Prob RAM
   prob_ram : base_ram generic map (
     WIDTHA     => 256, -- 8*32
-    SIZEA      => 256,
+    SIZEA      => 128,
     ADDRWIDTHA => 7,
     WIDTHB     => 4096, -- 16*8*32
     SIZEB      => 64,
