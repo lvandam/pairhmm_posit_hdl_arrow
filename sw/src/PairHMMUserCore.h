@@ -21,7 +21,7 @@
 
 #include "batch.hpp"
 
-#define CORES   2
+#define CORES   1
 #define MAX_CORES 8
 #define BATCHES_PER_CORE 2
 

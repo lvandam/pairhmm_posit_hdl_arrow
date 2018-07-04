@@ -210,7 +210,7 @@ architecture action_pairhmm of action_pairhmm is
   component arrow_pairhmm is
     generic (
       -- Number of pair HMM units. Must be a natural multiple of 2
-      CORES : natural := 2;
+      CORES : natural := 1;
 
       -- Host bus properties
       BUS_ADDR_WIDTH : natural := 64;

@@ -46,7 +46,7 @@
 #endif
 
 /* Burst step length in bytes */
-#define BURST_LENGTH 32
+#define BURST_LENGTH 16
 
 using namespace std;
 
@@ -135,15 +135,6 @@ int main(int argc, char ** argv)
         // Create the read and probabilities columns
         shared_ptr<arrow::Table> table_reads_reads = create_table_reads_reads(batches);
         shared_ptr<arrow::Table> table_reads_probs = create_table_reads_probs(batches);
-        // Create arrays for results to be written to (per SA core)
-        std::vector<uint32_t *> result_hw(roundToMultiple(CORES, 2));
-        for(int i = 0; i < roundToMultiple(CORES, 2); i++) {
-                rc = posix_memalign((void * * ) &(result_hw[i]), BURST_LENGTH * roundToMultiple(CORES, 2), sizeof(uint32_t) * num_rows);
-                // clear values buffer
-                for (uint32_t j = 0; j < num_rows; j++) {
-                        result_hw[i][j] = 0xDEADBEEF;
-                }
-        }
 
         // Calculate on FPGA
         // Create a platform
@@ -170,9 +161,18 @@ int main(int argc, char ** argv)
         uc.reset();
 
         // Write result buffer addresses
+        // Create arrays for results to be written to (per SA core)
+        std::vector<uint32_t *> result_hw(roundToMultiple(CORES, 2));
         for(int i = 0; i < roundToMultiple(CORES, 2); i++) {
+                rc = posix_memalign((void * * ) &(result_hw[i]), BURST_LENGTH*roundToMultiple(CORES, 2), sizeof(uint32_t) * (num_rows+1));
+                // clear values buffer
+                for (uint32_t j = 0; j < num_rows+1; j++) {
+                        result_hw[i][j] = 0xDEADBEEF;
+                }
+
                 addr_lohi val;
                 val.full = (uint64_t) result_hw[i];
+                printf("Values buffer @ %016lX\n", val.full);
                 platform->write_mmio(REG_RESULT_DATA_OFFSET + i, val.full);
         }
 
@@ -207,35 +207,36 @@ int main(int argc, char ** argv)
 
         // Wait for last result of last SA core
         do {
-                usleep(10);
+            // Get the number of matches from the UserCore
+            for(int i = 0; i < CORES; i++) {
+                    cout << "==================================" << endl;
+                    cout << "== CORE " << i << endl;
+                    cout << "==================================" << endl;
+                    for(int j = 0; j < num_rows; j++) {
+                            cout << dec << j <<": " << hex << result_hw[i][j] << dec <<endl;
+                    }
+                    cout << "==================================" << endl;
+                    cout << endl;
+            }
+            usleep(200000);
         }
         while ((result_hw[CORES - 1][num_rows - 1] == 0xDEADBEEF));
 
-        // Get the number of matches from the UserCore
-        for(int i = 0; i < CORES; i++) {
-                cout << "==================================" << endl;
-                cout << "== CORE " << i << endl;
-                cout << "==================================" << endl;
-                for(int j = 0; j < num_rows; j++) {
-                        cout << dec << j <<": " << hex << result_hw[i][j] << dec <<endl;
-                }
-                cout << "==================================" << endl;
-                cout << endl;
-        }
+
 
         // Check for errors with SW calculation
         if (calculate_sw) {
                 DebugValues<posit<NBITS, ES> > hw_debug_values;
 
                 for (int c = 0; c < CORES; c++) {
-                    for (int i = 0; i < BATCHES_PER_CORE; i++) {
-                            for(int j = 0; j < PIPE_DEPTH; j++) {
-                                // Store HW posit result for decimal accuracy calculation
-                                posit<NBITS, ES> res_hw;
-                                res_hw.set_raw_bits(result_hw[c][i * PIPE_DEPTH + j]);
-                                hw_debug_values.debugValue(res_hw, "result[%d][%d]", c * BATCHES_PER_CORE + (BATCHES_PER_CORE - i - 1), j);
-                            }
-                    }
+                        for (int i = 0; i < BATCHES_PER_CORE; i++) {
+                                for(int j = 0; j < PIPE_DEPTH; j++) {
+                                        // Store HW posit result for decimal accuracy calculation
+                                        posit<NBITS, ES> res_hw;
+                                        res_hw.set_raw_bits(result_hw[c][i * PIPE_DEPTH + j]);
+                                        hw_debug_values.debugValue(res_hw, "result[%d][%d]", c * BATCHES_PER_CORE + (BATCHES_PER_CORE - i - 1), j);
+                                }
+                        }
                 }
 
                 writeBenchmark(pairhmm_dec50, pairhmm_float, pairhmm_posit, hw_debug_values,

@@ -30,9 +30,8 @@ package arrow_pairhmm_pkg is
   constant BOTTOM_DATA_WIDTH     : natural := 512;
   constant BOTTOM_ID_WIDTH       : natural := 1;
   constant BOTTOM_BURST_STEP_LEN : natural := 1;
-  constant BOTTOM_BURST_MAX_LEN  : natural := 32;
+  constant BOTTOM_BURST_MAX_LEN  : natural := 16;
   constant BOTTOM_LEN_WIDTH      : natural := log2ceil(BOTTOM_BURST_MAX_LEN) + 1;
-  constant BOTTOM_ENABLE_FIFO    : boolean := true;
 
   constant MID_ADDR_WIDTH  : natural := 64;
   constant MID_DATA_WIDTH  : natural := 512;
@@ -388,6 +387,43 @@ package arrow_pairhmm_pkg is
       underflow : out std_logic
       );
   end component;
+
+  component base_fifo is
+    port (
+      rst       : in  std_logic;
+      wr_clk    : in  std_logic;
+      rd_clk    : in  std_logic;
+      din       : in  std_logic_vector (2 downto 0);
+      wr_en     : in  std_logic;
+      rd_en     : in  std_logic;
+      dout      : out std_logic_vector (2 downto 0);
+      full      : out std_logic;
+      wr_ack    : out std_logic;
+      overflow  : out std_logic;
+      empty     : out std_logic;
+      valid     : out std_logic;
+      underflow : out std_logic
+      );
+  end component;
+
+  component prob_fifo is
+    port (
+      rst       : in  std_logic;
+      wr_clk    : in  std_logic;
+      rd_clk    : in  std_logic;
+      din       : in  std_logic_vector (255 downto 0);
+      wr_en     : in  std_logic;
+      rd_en     : in  std_logic;
+      dout      : out std_logic_vector (255 downto 0);
+      full      : out std_logic;
+      wr_ack    : out std_logic;
+      overflow  : out std_logic;
+      empty     : out std_logic;
+      valid     : out std_logic;
+      underflow : out std_logic
+      );
+  end component;
+
 end package;
 
 package body arrow_pairhmm_pkg is
