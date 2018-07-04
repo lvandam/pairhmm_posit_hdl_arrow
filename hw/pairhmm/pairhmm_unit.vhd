@@ -862,10 +862,10 @@ begin
     cw_v.str_result_elem_in := str_result_elem_in;
 
     -- Default ColumnWriter input
-    cw_v.str_result_elem_out.data.valid  := cw_r.str_result_elem_out.data.valid;
-    cw_v.str_result_elem_out.data.dvalid := cw_r.str_result_elem_out.data.dvalid;
-    cw_v.str_result_elem_out.data.last   := cw_r.str_result_elem_out.data.last;
-    cw_v.str_result_elem_out.data.data   := cw_r.str_result_elem_out.data.data;
+    cw_v.str_result_elem_out.data.valid  := '0';
+    cw_v.str_result_elem_out.data.dvalid := '0';
+    cw_v.str_result_elem_out.data.last   := '0';
+    cw_v.str_result_elem_out.data.data   := x"00000000";
 
     -- Disable command streams by default
     o.cmd.valid := '0';
@@ -891,8 +891,8 @@ begin
       when COLUMNWRITE =>
         -- Write in case of valid output FIFO data
         if re.outfifo.c.empty = '0' then
-          re.outfifo.c.rd_en <= '1';
-          if re.outfifo.c.valid = '1' then
+            re.outfifo.c.rd_en <= '1';
+
             cw_v.str_result_elem_out.data.valid  := '1';
             cw_v.str_result_elem_out.data.dvalid := '1';
             cw_v.str_result_elem_out.data.last   := '1';
@@ -904,14 +904,13 @@ begin
             cw_v.result_index := cw_r.result_index + 1;
 
             cw_v.state := WAIT_ACCEPT;
-          end if;
         end if;
 
       when WAIT_ACCEPT =>
         re.outfifo.c.rd_en <= '0';
+
         if result_cmd_ready = '1' then
           o.cmd.valid := '1';
-
           -- Command is accepted, wait for unlock.
           cw_v.state := UNLOCK;
         end if;
@@ -1202,14 +1201,14 @@ begin
   end process;
 
 
---  ____                           ______   _____   ______    ____
--- |  _ \                         |  ____| |_   _| |  ____|  / __ \
--- | |_) |   __ _   ___    ___    | |__      | |   | |__    | |  | |  ___
--- |  _ <   / _` | / __|  / _ \   |  __|     | |   |  __|   | |  | | / __|
--- | |_) | | (_| | \__ \ |  __/   | |       _| |_  | |      | |__| | \__ \
--- |____/   \__,_| |___/  \___|   |_|      |_____| |_|       \____/  |___/
+  --  ____                           ______   _____   ______    ____
+  -- |  _ \                         |  ____| |_   _| |  ____|  / __ \
+  -- | |_) |   __ _   ___    ___    | |__      | |   | |__    | |  | |  ___
+  -- |  _ <   / _` | / __|  / _ \   |  __|     | |   |  __|   | |  | | / __|
+  -- | |_) | | (_| | \__ \ |  __/   | |       _| |_  | |      | |__| | \__ \
+  -- |____/   \__,_| |___/  \___|   |_|      |_____| |_|       \____/  |___/
 
--- Read shift register
+  -- Read shift register
   process(re, rs, read_delay_count, read_delay_rst)
   begin
     read_delay_valid <= '0';
@@ -1262,7 +1261,7 @@ begin
     end if;
   end process;
 
--- Prob shift register
+  -- Prob shift register
   process(re, r, rs, prob_delay_count, prob_delay_rst)
   begin
     prob_delay_valid <= '0';
@@ -1315,7 +1314,7 @@ begin
     end if;
   end process;
 
--- Haplotype shift register
+  -- Haplotype shift register
   process(re, rs, hapl_delay_count, hapl_delay_rst)
   begin
     hapl_delay_valid <= '0';
@@ -1419,42 +1418,42 @@ begin
     );
   re.haplfifo.c.wr_en <= r.hapl_wren(0);
 
----------------------------------------------------------------------------------------------------
---   _____   _                  _
---  / ____| | |                | |
--- | |      | |   ___     ___  | | __
--- | |      | |  / _ \   / __| | |/ /
--- | |____  | | | (_) | | (__  |   <
---  \_____| |_|  \___/   \___| |_|\_\
----------------------------------------------------------------------------------------------------
--- In case the kernel has to run slower due to timing constraints not being met, use this to lower the clock frequency
+  ---------------------------------------------------------------------------------------------------
+  --   _____   _                  _
+  --  / ____| | |                | |
+  -- | |      | |   ___     ___  | | __
+  -- | |      | |  / _ \   / __| | |/ /
+  -- | |____  | | | (_) | | (__  |   <
+  --  \_____| |_|  \___/   \___| |_|\_\
+  ---------------------------------------------------------------------------------------------------
+  -- In case the kernel has to run slower due to timing constraints not being met, use this to lower the clock frequency
   kernel_clock_gen : psl_to_kernel port map (
     clk_psl    => clk,
     clk_kernel => re.clk_kernel
     );
 
--- Use this to keep everything in the same clock domain:
--- re.clk_kernel <= clk;
+  -- Use this to keep everything in the same clock domain:
+  -- re.clk_kernel <= clk;
 
----------------------------------------------------------------------------------------------------
---     _____           _        _ _
---    / ____|         | |      | (_)          /\
---   | (___  _   _ ___| |_ ___ | |_  ___     /  \   _ __ _ __ __ _ _   _
---    \___ \| | | / __| __/ _ \| | |/ __|   / /\ \ | '__| '__/ _` | | | |
---    ____) | |_| \__ \ || (_) | | | (__   / ____ \| |  | | | (_| | |_| |
---   |_____/ \__, |___/\__\___/|_|_|\___| /_/    \_\_|  |_|  \__,_|\__, |
---            __/ |                                                 __/ |
---           |___/                                                 |___/
----------------------------------------------------------------------------------------------------
--- Connect clock and reset
+  ---------------------------------------------------------------------------------------------------
+  --     _____           _        _ _
+  --    / ____|         | |      | (_)          /\
+  --   | (___  _   _ ___| |_ ___ | |_  ___     /  \   _ __ _ __ __ _ _   _
+  --    \___ \| | | / __| __/ _ \| | |/ __|   / /\ \ | '__| '__/ _` | | | |
+  --    ____) | |_| \__ \ || (_) | | | (__   / ____ \| |  | | | (_| | |_| |
+  --   |_____/ \__, |___/\__\___/|_|_|\___| /_/    \_\_|  |_|  \__,_|\__, |
+  --            __/ |                                                 __/ |
+  --           |___/                                                 |___/
+  ---------------------------------------------------------------------------------------------------
+  -- Connect clock and reset
   re.pairhmm_cr <= (clk => re.clk_kernel,
                     rst => rs.pairhmm_rst
                     );
 
--- Input for the first PE
+  -- Input for the first PE
   re.pairhmm.i.first <= rs.pe_first;
 
--- Base X for the first PE must come from the read RAM or it must come from the feedback FIFO with a latency of 1
+  -- Base X for the first PE must come from the read RAM or it must come from the feedback FIFO with a latency of 1
   process(re, rs)
   begin
     if(rs.feedback_rd_en1 = '0') then
@@ -1471,14 +1470,14 @@ begin
   re.pairhmm.i.x         <= read_delay;
   re.pairhmm.i.ybus.data <= ybus_data_delay;
 
--- Schedule
+  -- Schedule
   re.pairhmm.i.schedule <= rs.core_schedule;
 
--- Address for Y bus
+  -- Address for Y bus
   re.pairhmm.i.ybus.addr <= rs.ybus_addr1;
   re.pairhmm.i.ybus.wren <= rs.ybus_en1;
 
--- Data for Y bus
+  -- Data for Y bus
   ybus_data_sel : for J in 0 to PE_DEPTH - 1 generate
     ybus_data_delay(J) <= hapldelay(PE_DEPTH - J - 1) when rs.ybus_addr1 < rs.leny else BP_STOP;
   end generate;
@@ -1490,16 +1489,16 @@ begin
     o  => re.pairhmm.o
     );
 
----------------------------------------------------------------------------------------------------
---  _____                           _
--- |_   _|                         | |
---  | |    _ __    _ __    _   _  | |_
---  | |   | '_ \  | '_ \  | | | | | __|
--- _| |_  | | | | | |_) | | |_| | | |_
--- |_____| |_| |_| | .__/   \__,_|  \__|
---                | |
---                |_|
----------------------------------------------------------------------------------------------------
+  ---------------------------------------------------------------------------------------------------
+  --  _____                           _
+  -- |_   _|                         | |
+  --  | |    _ __    _ __    _   _  | |_
+  --  | |   | '_ \  | '_ \  | | | | | __|
+  -- _| |_  | | | | | |_) | | |_| | | |_
+  -- |_____| |_| |_| | .__/   \__,_|  \__|
+  --                | |
+  --                |_|
+  ---------------------------------------------------------------------------------------------------
   -- Connect PAIRHMM inputs
   re.pairhmm_in.en    <= '1';
   re.pairhmm_in.valid <= rs.valid;
@@ -1533,44 +1532,44 @@ begin
     re.pairhmm_in.tmis.eta        <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(255 downto 224);
   end process;
 
----------------------------------------------------------------------------------------------------
---   ____            _                     _
---  / __ \          | |                   | |
--- | |  | |  _   _  | |_   _ __    _   _  | |_
--- | |  | | | | | | | __| | '_ \  | | | | | __|
--- | |__| | | |_| | | |_  | |_) | | |_| | | |_
---  \____/   \__,_|  \__| | .__/   \__,_|  \__|
---                        | |
---                        |_|
----------------------------------------------------------------------------------------------------
+  ---------------------------------------------------------------------------------------------------
+  --   ____            _                     _
+  --  / __ \          | |                   | |
+  -- | |  | |  _   _  | |_   _ __    _   _  | |_
+  -- | |  | | | | | | | __| | '_ \  | | | | | __|
+  -- | |__| | | |_| | | |_  | |_) | | |_| | | |_
+  --  \____/   \__,_|  \__| | .__/   \__,_|  \__|
+  --                        | |
+  --                        |_|
+  ---------------------------------------------------------------------------------------------------
   re.outfifo.din(31 downto 0) <= re.pairhmm.o.score;
   re.outfifo.c.wr_en          <= re.pairhmm.o.score_valid;
 
   outfifo : output_fifo
     port map (
-      wr_clk => re.clk_kernel,          -- in
-      rd_clk => clk,                    -- in
-      din    => re.outfifo.din,         -- in
-      wr_en  => re.outfifo.c.wr_en,     -- in
-      rd_en  => re.outfifo.c.rd_en,     -- in
+      wr_clk => re.clk_kernel,
+      rd_clk => clk,
+      din    => re.outfifo.din,
+      wr_en  => re.outfifo.c.wr_en,
+      rd_en  => re.outfifo.c.rd_en,
 
-      dout      => re.outfifo.dout,        -- out
-      full      => re.outfifo.c.full,      -- out
-      wr_ack    => re.outfifo.c.wr_ack,    -- out
-      overflow  => re.outfifo.c.overflow,  -- out
-      empty     => re.outfifo.c.empty,     -- out
-      valid     => re.outfifo.c.valid,     -- out
-      underflow => re.outfifo.c.underflow  -- out
+      dout      => re.outfifo.dout,
+      full      => re.outfifo.c.full,
+      wr_ack    => re.outfifo.c.wr_ack,
+      overflow  => re.outfifo.c.overflow,
+      empty     => re.outfifo.c.empty,
+      valid     => re.outfifo.c.valid,
+      underflow => re.outfifo.c.underflow
       );
 
----------------------------------------------------------------------------------------------------
---  ______                  _   _                      _
--- |  ____|                | | | |                    | |
--- | |__   ___    ___    __| | | |__     __ _    ___  | | __
--- |  __| / _ \  / _ \  / _` | | '_ \   / _` |  / __| | |/ /
--- | |   |  __/ |  __/ | (_| | | |_) | | (_| | | (__  |   <
--- |_|    \___|  \___|  \__,_| |_.__/   \__,_|  \___| |_|\_\
----------------------------------------------------------------------------------------------------
+  ---------------------------------------------------------------------------------------------------
+  --  ______                  _   _                      _
+  -- |  ____|                | | | |                    | |
+  -- | |__   ___    ___    __| | | |__     __ _    ___  | | __
+  -- |  __| / _ \  / _ \  / _` | | '_ \   / _` |  / __| | |/ /
+  -- | |   |  __/ |  __/ | (_| | | |_) | | (_| | | (__  |   <
+  -- |_|    \___|  \___|  \__,_| |_.__/   \__,_|  \___| |_|\_\
+  ---------------------------------------------------------------------------------------------------
   -- Output data that is written back to the memory, goes into the fifo first
   re.fbfifo.din(31 downto 0)    <= re.pairhmm.o.last.mids.ml;
   re.fbfifo.din(95 downto 64)   <= re.pairhmm.o.last.mids.dl;
@@ -1637,16 +1636,16 @@ begin
   re.fbpairhmm.cell  <= rs.cell;
 
 
----------------------------------------------------------------------------------------------------
---     _____      _              _       _
---    / ____|    | |            | |     | |
---   | (___   ___| |__   ___  __| |_   _| | ___ _ __
---    \___ \ / __| '_ \ / _ \/ _` | | | | |/ _ \ '__|
---    ____) | (__| | | |  __/ (_| | |_| | |  __/ |
---   |_____/ \___|_| |_|\___|\__,_|\__,_|_|\___|_|
----------------------------------------------------------------------------------------------------
--- This implements a round-robin scheduler to fill pipeline stage n with the output of FIFO n
----------------------------------------------------------------------------------------------------
+  ---------------------------------------------------------------------------------------------------
+  --     _____      _              _       _
+  --    / ____|    | |            | |     | |
+  --   | (___   ___| |__   ___  __| |_   _| | ___ _ __
+  --    \___ \ / __| '_ \ / _ \/ _` | | | | |/ _ \ '__|
+  --    ____) | (__| | | |  __/ (_| | |_| | |  __/ |
+  --   |_____/ \___|_| |_|\___|\__,_|\__,_|_|\___|_|
+  ---------------------------------------------------------------------------------------------------
+  -- This implements a round-robin scheduler to fill pipeline stage n with the output of FIFO n
+  ---------------------------------------------------------------------------------------------------
 
   scheduler_comb : process(r, re, rs, read_delay_valid)
     variable vs : cu_sched;
@@ -1660,14 +1659,14 @@ begin
     vs.shift_prob_buffer := '0';
     vs.shift_hapl_buffer := '0';
 
-                                        -- Select the proper input, also correct for latency of 1 of the hapl and read RAMs:
+    -- Select the proper input, also correct for latency of 1 of the hapl and read RAMs:
     if rs.feedback_rd_en = '0' then
       vs.pe_first := re.pairhmm_in;
     else
       vs.pe_first := re.fbpairhmm;
     end if;
 
-                                        -- Control signals that also need a latency of 1 for this reason:
+    -- Control signals that also need a latency of 1 for this reason:
     vs.ybus_addr1      := rs.ybus_addr;
     vs.core_schedule   := rs.schedule;
     vs.feedback_rd_en1 := rs.feedback_rd_en;
@@ -1675,13 +1674,13 @@ begin
 
 --------------------------------------------------------------------------------------------------- round robin schedule
     -- Schedule is always running, this is to keep the PairHMM core running even when the scheduler
-        -- itself is idle. This allows the scheduler to start a new batch while there is still an old
-            -- batch somewhere in the Systolic Array
+    -- itself is idle. This allows the scheduler to start a new batch while there is still an old
+    -- batch somewhere in the Systolic Array
 
-                                        -- Go to next pair
+    -- Go to next pair
     vs.schedule := rs.schedule + 1;
 
-                                        -- Wrap around (required when log2(PE_DEPTH) is not an integer
+    -- Wrap around (required when log2(PE_DEPTH) is not an integer
     if vs.schedule = PE_DEPTH then
       vs.schedule := (others => '0');
     end if;
@@ -1693,7 +1692,7 @@ begin
 --------------------------------------------------------------------------------------------------- state machine
     case rs.state is
       when SCHED_IDLE =>
-                                        -- Gather the sizes, bases and initial D row value from the other clock domain
+        -- Gather the sizes, bases and initial D row value from the other clock domain
         vs.leny  := r.sched.y_len(log2e(PAIRHMM_MAX_SIZE) downto 0);
         vs.sizey := r.sched.y_size(log2e(PAIRHMM_MAX_SIZE) downto 0);
 
@@ -1719,8 +1718,8 @@ begin
         vs.shift_prob_buffer := '0';
         vs.shift_hapl_buffer := '0';
 
-                                        -- Start everything when the FIFO's are filled and align with the scheduler
-                                        -- Starting up takes two cycles, thus we wait until the scheduler is at PE_DEPTH - 2.
+        -- Start everything when the FIFO's are filled and align with the scheduler
+        -- Starting up takes two cycles, thus we wait until the scheduler is at PE_DEPTH - 2.
         if r.filled = '1' and rs.schedule = PE_DEPTH - 2 and read_delay_valid = '1' then
           vs.state        := SCHED_STARTUP;
           vs.feedback_rst := '0';
@@ -1729,7 +1728,7 @@ begin
 
       when SCHED_STARTUP =>
         vs.state     := SCHED_PROCESSING;  -- Go to processing state
-        vs.valid     := '1';            -- Enable data valid on the next cycle
+        vs.valid     := '1';     -- Enable data valid on the next cycle
         vs.cell      := PE_TOP;  -- First cycle we will be at top of matrix
         vs.startflag := '1';
         vs.ybus_en   := '1';
@@ -1741,11 +1740,11 @@ begin
           prob_delay_rst <= '1';
         end if;
 
-                                        -- Unset the startflag
+        -- Unset the startflag
         vs.startflag := '0';
 
-                                        -- Increase PairHMM cycle, except when this is the first cycle, which we can check by looking at the last bit of fifo_rd_en
-                                        -- Everything inside this if statement is triggered when a new cell update cycle starts
+        -- Increase PairHMM cycle, except when this is the first cycle, which we can check by looking at the last bit of fifo_rd_en
+        -- Everything inside this if statement is triggered when a new cell update cycle starts
         if vs.schedule = u(PE_DEPTH - 3, PE_DEPTH_BITS) and rs.startflag = '0' and rs.ybus_addr1 < rs.leny then
           vs.shift_prob_buffer := '1';
         end if;
@@ -1775,12 +1774,12 @@ begin
           if rs.element /= PAIRHMM_NUM_PES - 1 then
             vs.element   := rs.element + 1;  -- Increase processing highest active element in supercolumn counter
             vs.ybus_addr := rs.ybus_addr + 1;  -- Increase X Bus address
-            vs.ybus_en   := '1';        -- Write to next element
+            vs.ybus_en   := '1'; -- Write to next element
           end if;
 
-                                      -- If we are done with the last padded base of X
+          -- If we are done with the last padded base of X
           if vs.basepair = rs.sizexp then
-                                        -- If this is not the last base
+            -- If this is not the last base
             if rs.cell /= PE_LAST then
               vs.supercolumn := rs.supercolumn + 1;  -- Advance to the next supercolumn
               vs.element     := (others => '0');  -- Reset the highest active element in supercolumn counter
@@ -1791,10 +1790,10 @@ begin
             end if;
           end if;
 
-                                        -- Default PE cell state is normal:
+          -- Default PE cell state is normal:
           vs.cell := PE_NORMAL;
 
-                                        -- If the vertical basepair we're working on is 0, we are at the top of the matrix
+          -- If the vertical basepair we're working on is 0, we are at the top of the matrix
           if vs.basepair = 0 then
             vs.cell := PE_TOP;
           end if;

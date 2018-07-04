@@ -30,7 +30,7 @@ package arrow_pairhmm_pkg is
   constant BOTTOM_DATA_WIDTH     : natural := 512;
   constant BOTTOM_ID_WIDTH       : natural := 1;
   constant BOTTOM_BURST_STEP_LEN : natural := 1;
-  constant BOTTOM_BURST_MAX_LEN  : natural := 16;
+  constant BOTTOM_BURST_MAX_LEN  : natural := 32;
   constant BOTTOM_LEN_WIDTH      : natural := log2ceil(BOTTOM_BURST_MAX_LEN) + 1;
 
   constant MID_ADDR_WIDTH  : natural := 64;

@@ -46,7 +46,7 @@
 #endif
 
 /* Burst step length in bytes */
-#define BURST_LENGTH 16
+#define BURST_LENGTH 128
 
 using namespace std;
 
@@ -163,10 +163,12 @@ int main(int argc, char ** argv)
         // Write result buffer addresses
         // Create arrays for results to be written to (per SA core)
         std::vector<uint32_t *> result_hw(roundToMultiple(CORES, 2));
-        for(int i = 0; i < roundToMultiple(CORES, 2); i++) {
-                rc = posix_memalign((void * * ) &(result_hw[i]), BURST_LENGTH*roundToMultiple(CORES, 2), sizeof(uint32_t) * (num_rows+1));
+        // for(int i = 0; i < roundToMultiple(CORES, 2); i++) {
+            int i = 0;
+                rc = posix_memalign((void * * ) &(result_hw[i]), BURST_LENGTH, sizeof(uint32_t) * num_rows);
+                cout << rc << endl;
                 // clear values buffer
-                for (uint32_t j = 0; j < num_rows+1; j++) {
+                for (uint32_t j = 0; j < num_rows; j++) {
                         result_hw[i][j] = 0xDEADBEEF;
                 }
 
@@ -174,7 +176,7 @@ int main(int argc, char ** argv)
                 val.full = (uint64_t) result_hw[i];
                 printf("Values buffer @ %016lX\n", val.full);
                 platform->write_mmio(REG_RESULT_DATA_OFFSET + i, val.full);
-        }
+        // }
 
         // Configure the pair HMM SA cores
         std::vector<t_inits> inits(roundToMultiple(CORES, 2));
