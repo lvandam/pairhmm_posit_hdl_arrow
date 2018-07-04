@@ -163,8 +163,7 @@ int main(int argc, char ** argv)
         // Write result buffer addresses
         // Create arrays for results to be written to (per SA core)
         std::vector<uint32_t *> result_hw(roundToMultiple(CORES, 2));
-        // for(int i = 0; i < roundToMultiple(CORES, 2); i++) {
-            int i = 0;
+        for(int i = 0; i < roundToMultiple(CORES, 2); i++) {
                 rc = posix_memalign((void * * ) &(result_hw[i]), BURST_LENGTH, sizeof(uint32_t) * num_rows);
                 cout << rc << endl;
                 // clear values buffer
@@ -176,7 +175,7 @@ int main(int argc, char ** argv)
                 val.full = (uint64_t) result_hw[i];
                 printf("Values buffer @ %016lX\n", val.full);
                 platform->write_mmio(REG_RESULT_DATA_OFFSET + i, val.full);
-        // }
+        }
 
         // Configure the pair HMM SA cores
         std::vector<t_inits> inits(roundToMultiple(CORES, 2));
@@ -209,22 +208,20 @@ int main(int argc, char ** argv)
 
         // Wait for last result of last SA core
         do {
-            // Get the number of matches from the UserCore
-            for(int i = 0; i < CORES; i++) {
-                    cout << "==================================" << endl;
-                    cout << "== CORE " << i << endl;
-                    cout << "==================================" << endl;
-                    for(int j = 0; j < num_rows; j++) {
-                            cout << dec << j <<": " << hex << result_hw[i][j] << dec <<endl;
-                    }
-                    cout << "==================================" << endl;
-                    cout << endl;
-            }
-            usleep(200000);
+            usleep(10);
         }
         while ((result_hw[CORES - 1][num_rows - 1] == 0xDEADBEEF));
 
-
+        for(int i = 0; i < CORES; i++) {
+                cout << "==================================" << endl;
+                cout << "== CORE " << i << endl;
+                cout << "==================================" << endl;
+                for(int j = 0; j < num_rows; j++) {
+                        cout << dec << j <<": " << hex << result_hw[i][j] << dec <<endl;
+                }
+                cout << "==================================" << endl;
+                cout << endl;
+        }
 
         // Check for errors with SW calculation
         if (calculate_sw) {

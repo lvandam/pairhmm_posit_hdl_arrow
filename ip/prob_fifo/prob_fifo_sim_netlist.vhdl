@@ -1,7 +1,7 @@
 -- Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
--- Date        : Wed Jul  4 10:17:59 2018
+-- Date        : Wed Jul  4 20:09:13 2018
 -- Host        : laurens-ubuntu running 64-bit Ubuntu 16.04.4 LTS
 -- Command     : write_vhdl -force -mode funcsim
 --               /home/laurens/Desktop/project_snap/project_snap.srcs/sources_1/ip/prob_fifo/prob_fifo_sim_netlist.vhdl
@@ -1289,6 +1289,7 @@ entity prob_fifo_blk_mem_gen_prim_wrapper is
     wr_clk : in STD_LOGIC;
     tmp_ram_rd_en : in STD_LOGIC;
     E : in STD_LOGIC_VECTOR ( 0 to 0 );
+    tmp_ram_regce : in STD_LOGIC;
     AS : in STD_LOGIC_VECTOR ( 0 to 0 );
     \gc0.count_d1_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
     \gic0.gc0.count_d2_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
@@ -1317,8 +1318,8 @@ begin
       CASCADE_ORDER_A => "NONE",
       CASCADE_ORDER_B => "NONE",
       CLOCK_DOMAINS => "INDEPENDENT",
-      DOA_REG => 0,
-      DOB_REG => 0,
+      DOA_REG => 1,
+      DOB_REG => 1,
       ENADDRENA => "FALSE",
       ENADDRENB => "FALSE",
       EN_ECC_PIPE => "FALSE",
@@ -1567,11 +1568,11 @@ begin
       INJECTDBITERR => '0',
       INJECTSBITERR => '0',
       RDADDRECC(8 downto 0) => \NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_RDADDRECC_UNCONNECTED\(8 downto 0),
-      REGCEAREGCE => '0',
+      REGCEAREGCE => tmp_ram_regce,
       REGCEB => '0',
-      RSTRAMARSTRAM => AS(0),
+      RSTRAMARSTRAM => '0',
       RSTRAMB => '0',
-      RSTREGARSTREG => '0',
+      RSTREGARSTREG => AS(0),
       RSTREGB => '0',
       SBITERR => \NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_SBITERR_UNCONNECTED\,
       SLEEP => '0',
@@ -1597,6 +1598,7 @@ entity \prob_fifo_blk_mem_gen_prim_wrapper__parameterized0\ is
     wr_clk : in STD_LOGIC;
     tmp_ram_rd_en : in STD_LOGIC;
     E : in STD_LOGIC_VECTOR ( 0 to 0 );
+    tmp_ram_regce : in STD_LOGIC;
     AS : in STD_LOGIC_VECTOR ( 0 to 0 );
     \gc0.count_d1_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
     \gic0.gc0.count_d2_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
@@ -1625,8 +1627,8 @@ begin
       CASCADE_ORDER_A => "NONE",
       CASCADE_ORDER_B => "NONE",
       CLOCK_DOMAINS => "INDEPENDENT",
-      DOA_REG => 0,
-      DOB_REG => 0,
+      DOA_REG => 1,
+      DOB_REG => 1,
       ENADDRENA => "FALSE",
       ENADDRENB => "FALSE",
       EN_ECC_PIPE => "FALSE",
@@ -1875,11 +1877,11 @@ begin
       INJECTDBITERR => '0',
       INJECTSBITERR => '0',
       RDADDRECC(8 downto 0) => \NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_RDADDRECC_UNCONNECTED\(8 downto 0),
-      REGCEAREGCE => '0',
+      REGCEAREGCE => tmp_ram_regce,
       REGCEB => '0',
-      RSTRAMARSTRAM => AS(0),
+      RSTRAMARSTRAM => '0',
       RSTRAMB => '0',
-      RSTREGARSTREG => '0',
+      RSTREGARSTREG => AS(0),
       RSTREGB => '0',
       SBITERR => \NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_SBITERR_UNCONNECTED\,
       SLEEP => '0',
@@ -1905,6 +1907,7 @@ entity \prob_fifo_blk_mem_gen_prim_wrapper__parameterized1\ is
     wr_clk : in STD_LOGIC;
     tmp_ram_rd_en : in STD_LOGIC;
     E : in STD_LOGIC_VECTOR ( 0 to 0 );
+    tmp_ram_regce : in STD_LOGIC;
     AS : in STD_LOGIC_VECTOR ( 0 to 0 );
     \gc0.count_d1_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
     \gic0.gc0.count_d2_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
@@ -1933,8 +1936,8 @@ begin
       CASCADE_ORDER_A => "NONE",
       CASCADE_ORDER_B => "NONE",
       CLOCK_DOMAINS => "INDEPENDENT",
-      DOA_REG => 0,
-      DOB_REG => 0,
+      DOA_REG => 1,
+      DOB_REG => 1,
       ENADDRENA => "FALSE",
       ENADDRENB => "FALSE",
       EN_ECC_PIPE => "FALSE",
@@ -2183,11 +2186,11 @@ begin
       INJECTDBITERR => '0',
       INJECTSBITERR => '0',
       RDADDRECC(8 downto 0) => \NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_RDADDRECC_UNCONNECTED\(8 downto 0),
-      REGCEAREGCE => '0',
+      REGCEAREGCE => tmp_ram_regce,
       REGCEB => '0',
-      RSTRAMARSTRAM => AS(0),
+      RSTRAMARSTRAM => '0',
       RSTRAMB => '0',
-      RSTREGARSTREG => '0',
+      RSTREGARSTREG => AS(0),
       RSTREGB => '0',
       SBITERR => \NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_SBITERR_UNCONNECTED\,
       SLEEP => '0',
@@ -2213,6 +2216,7 @@ entity \prob_fifo_blk_mem_gen_prim_wrapper__parameterized2\ is
     wr_clk : in STD_LOGIC;
     tmp_ram_rd_en : in STD_LOGIC;
     E : in STD_LOGIC_VECTOR ( 0 to 0 );
+    tmp_ram_regce : in STD_LOGIC;
     AS : in STD_LOGIC_VECTOR ( 0 to 0 );
     \gc0.count_d1_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
     \gic0.gc0.count_d2_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
@@ -2273,8 +2277,8 @@ begin
       CASCADE_ORDER_A => "NONE",
       CASCADE_ORDER_B => "NONE",
       CLOCK_DOMAINS => "INDEPENDENT",
-      DOA_REG => 0,
-      DOB_REG => 0,
+      DOA_REG => 1,
+      DOB_REG => 1,
       ENADDRENA => "FALSE",
       ENADDRENB => "FALSE",
       EN_ECC_PIPE => "FALSE",
@@ -2549,11 +2553,11 @@ begin
       INJECTDBITERR => '0',
       INJECTSBITERR => '0',
       RDADDRECC(8 downto 0) => \NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_RDADDRECC_UNCONNECTED\(8 downto 0),
-      REGCEAREGCE => '0',
+      REGCEAREGCE => tmp_ram_regce,
       REGCEB => '0',
-      RSTRAMARSTRAM => AS(0),
+      RSTRAMARSTRAM => '0',
       RSTRAMB => '0',
-      RSTREGARSTREG => '0',
+      RSTREGARSTREG => AS(0),
       RSTREGB => '0',
       SBITERR => \NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_SBITERR_UNCONNECTED\,
       SLEEP => '0',
@@ -2887,6 +2891,7 @@ entity prob_fifo_rd_handshaking_flags is
 end prob_fifo_rd_handshaking_flags;
 
 architecture STRUCTURE of prob_fifo_rd_handshaking_flags is
+  signal ram_valid_d1 : STD_LOGIC;
 begin
 \guf.guf1.underflow_i_reg\: unisim.vcomponents.FDRE
     generic map(
@@ -2908,6 +2913,17 @@ begin
       CE => '1',
       CLR => AS(0),
       D => ram_empty_i_reg,
+      Q => ram_valid_d1
+    );
+\gvep1.ram_valid_d2_reg\: unisim.vcomponents.FDCE
+    generic map(
+      INIT => '0'
+    )
+        port map (
+      C => rd_clk,
+      CE => '1',
+      CLR => AS(0),
+      D => ram_valid_d1,
       Q => valid
     );
 end STRUCTURE;
@@ -2921,6 +2937,7 @@ entity prob_fifo_rd_status_flags_as is
     \out\ : out STD_LOGIC;
     E : out STD_LOGIC_VECTOR ( 0 to 0 );
     \gv.ram_valid_d1_reg\ : out STD_LOGIC;
+    tmp_ram_rd_en : out STD_LOGIC;
     p_1_out : out STD_LOGIC;
     ram_empty_fb_i_reg_0 : in STD_LOGIC;
     rd_clk : in STD_LOGIC;
@@ -2948,7 +2965,17 @@ architecture STRUCTURE of prob_fifo_rd_status_flags_as is
 begin
   empty <= ram_empty_i;
   \out\ <= ram_empty_fb_i;
-\gc0.count_d1[7]_i_1\: unisim.vcomponents.LUT2
+\DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_i_1\: unisim.vcomponents.LUT3
+    generic map(
+      INIT => X"F4"
+    )
+        port map (
+      I0 => ram_empty_fb_i,
+      I1 => rd_en,
+      I2 => AS(0),
+      O => tmp_ram_rd_en
+    );
+\gbm.gregce.ram_rd_en_d1_i_1\: unisim.vcomponents.LUT2
     generic map(
       INIT => X"2"
     )
@@ -3562,6 +3589,7 @@ entity prob_fifo_blk_mem_gen_prim_width is
     wr_clk : in STD_LOGIC;
     tmp_ram_rd_en : in STD_LOGIC;
     E : in STD_LOGIC_VECTOR ( 0 to 0 );
+    tmp_ram_regce : in STD_LOGIC;
     AS : in STD_LOGIC_VECTOR ( 0 to 0 );
     \gc0.count_d1_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
     \gic0.gc0.count_d2_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
@@ -3583,6 +3611,7 @@ begin
       \gic0.gc0.count_d2_reg[7]\(7 downto 0) => \gic0.gc0.count_d2_reg[7]\(7 downto 0),
       rd_clk => rd_clk,
       tmp_ram_rd_en => tmp_ram_rd_en,
+      tmp_ram_regce => tmp_ram_regce,
       wr_clk => wr_clk
     );
 end STRUCTURE;
@@ -3597,6 +3626,7 @@ entity \prob_fifo_blk_mem_gen_prim_width__parameterized0\ is
     wr_clk : in STD_LOGIC;
     tmp_ram_rd_en : in STD_LOGIC;
     E : in STD_LOGIC_VECTOR ( 0 to 0 );
+    tmp_ram_regce : in STD_LOGIC;
     AS : in STD_LOGIC_VECTOR ( 0 to 0 );
     \gc0.count_d1_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
     \gic0.gc0.count_d2_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
@@ -3618,6 +3648,7 @@ begin
       \gic0.gc0.count_d2_reg[7]\(7 downto 0) => \gic0.gc0.count_d2_reg[7]\(7 downto 0),
       rd_clk => rd_clk,
       tmp_ram_rd_en => tmp_ram_rd_en,
+      tmp_ram_regce => tmp_ram_regce,
       wr_clk => wr_clk
     );
 end STRUCTURE;
@@ -3632,6 +3663,7 @@ entity \prob_fifo_blk_mem_gen_prim_width__parameterized1\ is
     wr_clk : in STD_LOGIC;
     tmp_ram_rd_en : in STD_LOGIC;
     E : in STD_LOGIC_VECTOR ( 0 to 0 );
+    tmp_ram_regce : in STD_LOGIC;
     AS : in STD_LOGIC_VECTOR ( 0 to 0 );
     \gc0.count_d1_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
     \gic0.gc0.count_d2_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
@@ -3653,6 +3685,7 @@ begin
       \gic0.gc0.count_d2_reg[7]\(7 downto 0) => \gic0.gc0.count_d2_reg[7]\(7 downto 0),
       rd_clk => rd_clk,
       tmp_ram_rd_en => tmp_ram_rd_en,
+      tmp_ram_regce => tmp_ram_regce,
       wr_clk => wr_clk
     );
 end STRUCTURE;
@@ -3667,6 +3700,7 @@ entity \prob_fifo_blk_mem_gen_prim_width__parameterized2\ is
     wr_clk : in STD_LOGIC;
     tmp_ram_rd_en : in STD_LOGIC;
     E : in STD_LOGIC_VECTOR ( 0 to 0 );
+    tmp_ram_regce : in STD_LOGIC;
     AS : in STD_LOGIC_VECTOR ( 0 to 0 );
     \gc0.count_d1_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
     \gic0.gc0.count_d2_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
@@ -3688,6 +3722,7 @@ begin
       \gic0.gc0.count_d2_reg[7]\(7 downto 0) => \gic0.gc0.count_d2_reg[7]\(7 downto 0),
       rd_clk => rd_clk,
       tmp_ram_rd_en => tmp_ram_rd_en,
+      tmp_ram_regce => tmp_ram_regce,
       wr_clk => wr_clk
     );
 end STRUCTURE;
@@ -3954,6 +3989,8 @@ entity prob_fifo_rd_logic is
     \out\ : out STD_LOGIC;
     valid : out STD_LOGIC;
     underflow : out STD_LOGIC;
+    E : out STD_LOGIC_VECTOR ( 0 to 0 );
+    tmp_ram_rd_en : out STD_LOGIC;
     Q : out STD_LOGIC_VECTOR ( 7 downto 0 );
     \DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram\ : out STD_LOGIC_VECTOR ( 7 downto 0 );
     ram_empty_fb_i_reg : in STD_LOGIC;
@@ -3966,21 +4003,23 @@ entity prob_fifo_rd_logic is
 end prob_fifo_rd_logic;
 
 architecture STRUCTURE of prob_fifo_rd_logic is
-  signal \gras.rsts_n_2\ : STD_LOGIC;
+  signal \^e\ : STD_LOGIC_VECTOR ( 0 to 0 );
   signal \gras.rsts_n_3\ : STD_LOGIC;
   signal p_1_out : STD_LOGIC;
 begin
+  E(0) <= \^e\(0);
 \gras.rsts\: entity work.prob_fifo_rd_status_flags_as
      port map (
       AS(0) => AS(0),
-      E(0) => \gras.rsts_n_2\,
+      E(0) => \^e\(0),
       empty => empty,
       \gv.ram_valid_d1_reg\ => \gras.rsts_n_3\,
       \out\ => \out\,
       p_1_out => p_1_out,
       ram_empty_fb_i_reg_0 => ram_empty_fb_i_reg,
       rd_clk => rd_clk,
-      rd_en => rd_en
+      rd_en => rd_en,
+      tmp_ram_rd_en => tmp_ram_rd_en
     );
 \grhf.rhf\: entity work.prob_fifo_rd_handshaking_flags
      port map (
@@ -3995,7 +4034,7 @@ rpntr: entity work.prob_fifo_rd_bin_cntr
      port map (
       AS(0) => AS(0),
       \DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram\(7 downto 0) => \DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram\(7 downto 0),
-      E(0) => \gras.rsts_n_2\,
+      E(0) => \^e\(0),
       Q(7 downto 0) => Q(7 downto 0),
       rd_clk => rd_clk
     );
@@ -4012,14 +4051,13 @@ entity prob_fifo_reset_blk_ramfifo is
     ram_full_fb_i_reg : out STD_LOGIC;
     \grstd1.grst_full.grst_f.rst_d1_reg_0\ : out STD_LOGIC;
     p_1_out : out STD_LOGIC;
-    tmp_ram_rd_en : out STD_LOGIC;
+    tmp_ram_regce : out STD_LOGIC;
     rst : in STD_LOGIC;
     wr_clk : in STD_LOGIC;
     rd_clk : in STD_LOGIC;
     ram_full_fb_i_reg_0 : in STD_LOGIC;
     wr_en : in STD_LOGIC;
-    ram_empty_fb_i_reg : in STD_LOGIC;
-    rd_en : in STD_LOGIC
+    ram_rd_en_d1 : in STD_LOGIC
   );
   attribute ORIG_REF_NAME : string;
   attribute ORIG_REF_NAME of prob_fifo_reset_blk_ramfifo : entity is "reset_blk_ramfifo";
@@ -4055,7 +4093,7 @@ architecture STRUCTURE of prob_fifo_reset_blk_ramfifo is
   signal sckt_rd_rst_wr : STD_LOGIC;
   signal wr_rst_rd_ext : STD_LOGIC_VECTOR ( 1 downto 0 );
   attribute SOFT_HLUTNM : string;
-  attribute SOFT_HLUTNM of \DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_i_1\ : label is "soft_lutpair12";
+  attribute SOFT_HLUTNM of \DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_i_3\ : label is "soft_lutpair12";
   attribute ASYNC_REG_boolean : boolean;
   attribute ASYNC_REG_boolean of \grstd1.grst_full.grst_f.rst_d1_reg\ : label is std.standard.true;
   attribute KEEP : string;
@@ -4114,15 +4152,14 @@ begin
   \grstd1.grst_full.grst_f.rst_d1_reg_0\ <= \^grstd1.grst_full.grst_f.rst_d1_reg_0\;
   \out\ <= rst_d2;
   ram_full_fb_i_reg <= rst_d3;
-\DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_i_1\: unisim.vcomponents.LUT3
+\DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_i_3\: unisim.vcomponents.LUT2
     generic map(
-      INIT => X"BA"
+      INIT => X"E"
     )
         port map (
       I0 => \^as\(0),
-      I1 => ram_empty_fb_i_reg,
-      I2 => rd_en,
-      O => tmp_ram_rd_en
+      I1 => ram_rd_en_d1,
+      O => tmp_ram_regce
     );
 \gof.gof1.overflow_i_i_1\: unisim.vcomponents.LUT3
     generic map(
@@ -4412,6 +4449,7 @@ entity prob_fifo_blk_mem_gen_generic_cstr is
     wr_clk : in STD_LOGIC;
     tmp_ram_rd_en : in STD_LOGIC;
     E : in STD_LOGIC_VECTOR ( 0 to 0 );
+    tmp_ram_regce : in STD_LOGIC;
     AS : in STD_LOGIC_VECTOR ( 0 to 0 );
     \gc0.count_d1_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
     \gic0.gc0.count_d2_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
@@ -4433,6 +4471,7 @@ begin
       \gic0.gc0.count_d2_reg[7]\(7 downto 0) => \gic0.gc0.count_d2_reg[7]\(7 downto 0),
       rd_clk => rd_clk,
       tmp_ram_rd_en => tmp_ram_rd_en,
+      tmp_ram_regce => tmp_ram_regce,
       wr_clk => wr_clk
     );
 \ramloop[1].ram.r\: entity work.\prob_fifo_blk_mem_gen_prim_width__parameterized0\
@@ -4445,6 +4484,7 @@ begin
       \gic0.gc0.count_d2_reg[7]\(7 downto 0) => \gic0.gc0.count_d2_reg[7]\(7 downto 0),
       rd_clk => rd_clk,
       tmp_ram_rd_en => tmp_ram_rd_en,
+      tmp_ram_regce => tmp_ram_regce,
       wr_clk => wr_clk
     );
 \ramloop[2].ram.r\: entity work.\prob_fifo_blk_mem_gen_prim_width__parameterized1\
@@ -4457,6 +4497,7 @@ begin
       \gic0.gc0.count_d2_reg[7]\(7 downto 0) => \gic0.gc0.count_d2_reg[7]\(7 downto 0),
       rd_clk => rd_clk,
       tmp_ram_rd_en => tmp_ram_rd_en,
+      tmp_ram_regce => tmp_ram_regce,
       wr_clk => wr_clk
     );
 \ramloop[3].ram.r\: entity work.\prob_fifo_blk_mem_gen_prim_width__parameterized2\
@@ -4469,6 +4510,7 @@ begin
       \gic0.gc0.count_d2_reg[7]\(7 downto 0) => \gic0.gc0.count_d2_reg[7]\(7 downto 0),
       rd_clk => rd_clk,
       tmp_ram_rd_en => tmp_ram_rd_en,
+      tmp_ram_regce => tmp_ram_regce,
       wr_clk => wr_clk
     );
 end STRUCTURE;
@@ -4483,6 +4525,7 @@ entity prob_fifo_blk_mem_gen_top is
     wr_clk : in STD_LOGIC;
     tmp_ram_rd_en : in STD_LOGIC;
     E : in STD_LOGIC_VECTOR ( 0 to 0 );
+    tmp_ram_regce : in STD_LOGIC;
     AS : in STD_LOGIC_VECTOR ( 0 to 0 );
     \gc0.count_d1_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
     \gic0.gc0.count_d2_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
@@ -4504,6 +4547,7 @@ begin
       \gic0.gc0.count_d2_reg[7]\(7 downto 0) => \gic0.gc0.count_d2_reg[7]\(7 downto 0),
       rd_clk => rd_clk,
       tmp_ram_rd_en => tmp_ram_rd_en,
+      tmp_ram_regce => tmp_ram_regce,
       wr_clk => wr_clk
     );
 end STRUCTURE;
@@ -4518,6 +4562,7 @@ entity prob_fifo_blk_mem_gen_v8_4_1_synth is
     wr_clk : in STD_LOGIC;
     tmp_ram_rd_en : in STD_LOGIC;
     E : in STD_LOGIC_VECTOR ( 0 to 0 );
+    tmp_ram_regce : in STD_LOGIC;
     AS : in STD_LOGIC_VECTOR ( 0 to 0 );
     \gc0.count_d1_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
     \gic0.gc0.count_d2_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
@@ -4539,6 +4584,7 @@ begin
       \gic0.gc0.count_d2_reg[7]\(7 downto 0) => \gic0.gc0.count_d2_reg[7]\(7 downto 0),
       rd_clk => rd_clk,
       tmp_ram_rd_en => tmp_ram_rd_en,
+      tmp_ram_regce => tmp_ram_regce,
       wr_clk => wr_clk
     );
 end STRUCTURE;
@@ -4553,6 +4599,7 @@ entity prob_fifo_blk_mem_gen_v8_4_1 is
     wr_clk : in STD_LOGIC;
     tmp_ram_rd_en : in STD_LOGIC;
     E : in STD_LOGIC_VECTOR ( 0 to 0 );
+    tmp_ram_regce : in STD_LOGIC;
     AS : in STD_LOGIC_VECTOR ( 0 to 0 );
     \gc0.count_d1_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
     \gic0.gc0.count_d2_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
@@ -4574,6 +4621,7 @@ inst_blk_mem_gen: entity work.prob_fifo_blk_mem_gen_v8_4_1_synth
       \gic0.gc0.count_d2_reg[7]\(7 downto 0) => \gic0.gc0.count_d2_reg[7]\(7 downto 0),
       rd_clk => rd_clk,
       tmp_ram_rd_en => tmp_ram_rd_en,
+      tmp_ram_regce => tmp_ram_regce,
       wr_clk => wr_clk
     );
 end STRUCTURE;
@@ -4584,14 +4632,17 @@ use UNISIM.VCOMPONENTS.ALL;
 entity prob_fifo_memory is
   port (
     dout : out STD_LOGIC_VECTOR ( 255 downto 0 );
+    ram_rd_en_d1 : out STD_LOGIC;
     rd_clk : in STD_LOGIC;
     wr_clk : in STD_LOGIC;
     tmp_ram_rd_en : in STD_LOGIC;
     E : in STD_LOGIC_VECTOR ( 0 to 0 );
+    tmp_ram_regce : in STD_LOGIC;
     AS : in STD_LOGIC_VECTOR ( 0 to 0 );
     \gc0.count_d1_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
     \gic0.gc0.count_d2_reg[7]\ : in STD_LOGIC_VECTOR ( 7 downto 0 );
-    din : in STD_LOGIC_VECTOR ( 255 downto 0 )
+    din : in STD_LOGIC_VECTOR ( 255 downto 0 );
+    ram_empty_fb_i_reg : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
   attribute ORIG_REF_NAME : string;
   attribute ORIG_REF_NAME of prob_fifo_memory : entity is "memory";
@@ -4599,7 +4650,7 @@ end prob_fifo_memory;
 
 architecture STRUCTURE of prob_fifo_memory is
 begin
-\gbm.gbmg.gbmga.ngecc.bmg\: entity work.prob_fifo_blk_mem_gen_v8_4_1
+\gbm.gbmg.gbmgc.ngecc.bmg\: entity work.prob_fifo_blk_mem_gen_v8_4_1
      port map (
       AS(0) => AS(0),
       E(0) => E(0),
@@ -4609,7 +4660,19 @@ begin
       \gic0.gc0.count_d2_reg[7]\(7 downto 0) => \gic0.gc0.count_d2_reg[7]\(7 downto 0),
       rd_clk => rd_clk,
       tmp_ram_rd_en => tmp_ram_rd_en,
+      tmp_ram_regce => tmp_ram_regce,
       wr_clk => wr_clk
+    );
+\gbm.gregce.ram_rd_en_d1_reg\: unisim.vcomponents.FDCE
+    generic map(
+      INIT => '0'
+    )
+        port map (
+      C => rd_clk,
+      CE => '1',
+      CLR => AS(0),
+      D => ram_empty_fb_i_reg(0),
+      Q => ram_rd_en_d1
     );
 end STRUCTURE;
 library IEEE;
@@ -4641,6 +4704,7 @@ end prob_fifo_fifo_generator_ramfifo;
 architecture STRUCTURE of prob_fifo_fifo_generator_ramfifo is
   signal \gntv_or_sync_fifo.gcx.clkx_n_0\ : STD_LOGIC;
   signal \gntv_or_sync_fifo.gcx.clkx_n_7\ : STD_LOGIC;
+  signal \gntv_or_sync_fifo.gl0.rd_n_4\ : STD_LOGIC;
   signal \gntv_or_sync_fifo.gl0.wr_n_1\ : STD_LOGIC;
   signal \gntv_or_sync_fifo.gl0.wr_n_12\ : STD_LOGIC;
   signal \gntv_or_sync_fifo.gl0.wr_n_13\ : STD_LOGIC;
@@ -4651,12 +4715,14 @@ architecture STRUCTURE of prob_fifo_fifo_generator_ramfifo is
   signal p_20_out : STD_LOGIC;
   signal p_25_out : STD_LOGIC_VECTOR ( 7 downto 2 );
   signal p_2_out : STD_LOGIC;
+  signal ram_rd_en_d1 : STD_LOGIC;
   signal rd_pntr_plus1 : STD_LOGIC_VECTOR ( 7 downto 0 );
   signal rst_full_ff_i : STD_LOGIC;
   signal rst_full_gen_i : STD_LOGIC;
   signal rstblk_n_0 : STD_LOGIC;
   signal \^syncstages_ff_reg[0]\ : STD_LOGIC;
   signal tmp_ram_rd_en : STD_LOGIC;
+  signal tmp_ram_regce : STD_LOGIC;
   signal wr_pntr_plus2 : STD_LOGIC_VECTOR ( 6 downto 0 );
 begin
   \syncstages_ff_reg[0]\ <= \^syncstages_ff_reg[0]\;
@@ -4682,12 +4748,14 @@ begin
      port map (
       AS(0) => \^syncstages_ff_reg[0]\,
       \DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram\(7 downto 0) => p_0_out(7 downto 0),
+      E(0) => \gntv_or_sync_fifo.gl0.rd_n_4\,
       Q(7 downto 0) => rd_pntr_plus1(7 downto 0),
       empty => empty,
       \out\ => p_2_out,
       ram_empty_fb_i_reg => \gntv_or_sync_fifo.gcx.clkx_n_7\,
       rd_clk => rd_clk,
       rd_en => rd_en,
+      tmp_ram_rd_en => tmp_ram_rd_en,
       underflow => underflow,
       valid => valid
     );
@@ -4719,8 +4787,11 @@ begin
       dout(255 downto 0) => dout(255 downto 0),
       \gc0.count_d1_reg[7]\(7 downto 0) => p_0_out(7 downto 0),
       \gic0.gc0.count_d2_reg[7]\(7 downto 0) => p_13_out(7 downto 0),
+      ram_empty_fb_i_reg(0) => \gntv_or_sync_fifo.gl0.rd_n_4\,
+      ram_rd_en_d1 => ram_rd_en_d1,
       rd_clk => rd_clk,
       tmp_ram_rd_en => tmp_ram_rd_en,
+      tmp_ram_regce => tmp_ram_regce,
       wr_clk => wr_clk
     );
 rstblk: entity work.prob_fifo_reset_blk_ramfifo
@@ -4730,13 +4801,12 @@ rstblk: entity work.prob_fifo_reset_blk_ramfifo
       \grstd1.grst_full.grst_f.rst_d1_reg_0\ => \grstd1.grst_full.grst_f.rst_d1_reg\,
       \out\ => rst_full_ff_i,
       p_1_out => \gwhf.whf/p_1_out\,
-      ram_empty_fb_i_reg => p_2_out,
       ram_full_fb_i_reg => rst_full_gen_i,
       ram_full_fb_i_reg_0 => \gntv_or_sync_fifo.gl0.wr_n_1\,
+      ram_rd_en_d1 => ram_rd_en_d1,
       rd_clk => rd_clk,
-      rd_en => rd_en,
       rst => rst,
-      tmp_ram_rd_en => tmp_ram_rd_en,
+      tmp_ram_regce => tmp_ram_regce,
       wr_clk => wr_clk,
       wr_en => wr_en
     );
@@ -5296,9 +5366,9 @@ entity prob_fifo_fifo_generator_v13_2_1 is
   attribute C_POWER_SAVING_MODE : integer;
   attribute C_POWER_SAVING_MODE of prob_fifo_fifo_generator_v13_2_1 : entity is 0;
   attribute C_PRELOAD_LATENCY : integer;
-  attribute C_PRELOAD_LATENCY of prob_fifo_fifo_generator_v13_2_1 : entity is 1;
+  attribute C_PRELOAD_LATENCY of prob_fifo_fifo_generator_v13_2_1 : entity is 2;
   attribute C_PRELOAD_REGS : integer;
-  attribute C_PRELOAD_REGS of prob_fifo_fifo_generator_v13_2_1 : entity is 0;
+  attribute C_PRELOAD_REGS of prob_fifo_fifo_generator_v13_2_1 : entity is 1;
   attribute C_PRIM_FIFO_TYPE : string;
   attribute C_PRIM_FIFO_TYPE of prob_fifo_fifo_generator_v13_2_1 : entity is "512x72";
   attribute C_PRIM_FIFO_TYPE_AXIS : string;
@@ -5426,7 +5496,7 @@ entity prob_fifo_fifo_generator_v13_2_1 is
   attribute C_USE_ECC_WRCH : integer;
   attribute C_USE_ECC_WRCH of prob_fifo_fifo_generator_v13_2_1 : entity is 0;
   attribute C_USE_EMBEDDED_REG : integer;
-  attribute C_USE_EMBEDDED_REG of prob_fifo_fifo_generator_v13_2_1 : entity is 0;
+  attribute C_USE_EMBEDDED_REG of prob_fifo_fifo_generator_v13_2_1 : entity is 1;
   attribute C_USE_FIFO16_FLAGS : integer;
   attribute C_USE_FIFO16_FLAGS of prob_fifo_fifo_generator_v13_2_1 : entity is 0;
   attribute C_USE_FWFT_DATA_COUNT : integer;
@@ -6398,9 +6468,9 @@ architecture STRUCTURE of prob_fifo is
   attribute C_POWER_SAVING_MODE : integer;
   attribute C_POWER_SAVING_MODE of U0 : label is 0;
   attribute C_PRELOAD_LATENCY : integer;
-  attribute C_PRELOAD_LATENCY of U0 : label is 1;
+  attribute C_PRELOAD_LATENCY of U0 : label is 2;
   attribute C_PRELOAD_REGS : integer;
-  attribute C_PRELOAD_REGS of U0 : label is 0;
+  attribute C_PRELOAD_REGS of U0 : label is 1;
   attribute C_PRIM_FIFO_TYPE : string;
   attribute C_PRIM_FIFO_TYPE of U0 : label is "512x72";
   attribute C_PRIM_FIFO_TYPE_AXIS : string;
@@ -6528,7 +6598,7 @@ architecture STRUCTURE of prob_fifo is
   attribute C_USE_ECC_WRCH : integer;
   attribute C_USE_ECC_WRCH of U0 : label is 0;
   attribute C_USE_EMBEDDED_REG : integer;
-  attribute C_USE_EMBEDDED_REG of U0 : label is 0;
+  attribute C_USE_EMBEDDED_REG of U0 : label is 1;
   attribute C_USE_FIFO16_FLAGS : integer;
   attribute C_USE_FIFO16_FLAGS of U0 : label is 0;
   attribute C_USE_FWFT_DATA_COUNT : integer;

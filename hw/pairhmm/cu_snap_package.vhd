@@ -18,7 +18,9 @@ package cu_snap_package is
 ----------------------------------------------------------------------------------------------------------------------- internals
 
   type fifo_controls is record
-    rd_en : std_logic;
+    rd_en  : std_logic;
+    rd_en1 : std_logic;
+
     valid : std_logic;
 
     wr_en  : std_logic;

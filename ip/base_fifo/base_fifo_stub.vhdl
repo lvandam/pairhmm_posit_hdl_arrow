@@ -1,7 +1,7 @@
 -- Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
--- Date        : Mon Jul  2 16:44:18 2018
+-- Date        : Wed Jul  4 20:05:41 2018
 -- Host        : laurens-ubuntu running 64-bit Ubuntu 16.04.4 LTS
 -- Command     : write_vhdl -force -mode synth_stub
 --               /home/laurens/Desktop/project_snap/project_snap.srcs/sources_1/ip/base_fifo/base_fifo_stub.vhdl

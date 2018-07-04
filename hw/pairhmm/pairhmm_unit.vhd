@@ -891,19 +891,19 @@ begin
       when COLUMNWRITE =>
         -- Write in case of valid output FIFO data
         if re.outfifo.c.empty = '0' then
-            re.outfifo.c.rd_en <= '1';
+          re.outfifo.c.rd_en <= '1';
 
-            cw_v.str_result_elem_out.data.valid  := '1';
-            cw_v.str_result_elem_out.data.dvalid := '1';
-            cw_v.str_result_elem_out.data.last   := '1';
-            cw_v.str_result_elem_out.data.data   := re.outfifo.dout;
+          cw_v.str_result_elem_out.data.valid  := '1';
+          cw_v.str_result_elem_out.data.dvalid := '1';
+          cw_v.str_result_elem_out.data.last   := '1';
+          cw_v.str_result_elem_out.data.data   := re.outfifo.dout;
 
-            o.cmd.firstIdx := slvec(cw_v.result_index, VALUES_WIDTH_RESULT);
-            o.cmd.lastIdx  := slvec(cw_v.result_index + 1, VALUES_WIDTH_RESULT);
+          o.cmd.firstIdx := slvec(cw_v.result_index, VALUES_WIDTH_RESULT);
+          o.cmd.lastIdx  := slvec(cw_v.result_index + 1, VALUES_WIDTH_RESULT);
 
-            cw_v.result_index := cw_r.result_index + 1;
+          cw_v.result_index := cw_r.result_index + 1;
 
-            cw_v.state := WAIT_ACCEPT;
+          cw_v.state := WAIT_ACCEPT;
         end if;
 
       when WAIT_ACCEPT =>
@@ -912,7 +912,7 @@ begin
         if result_cmd_ready = '1' then
           o.cmd.valid := '1';
           -- Command is accepted, wait for unlock.
-          cw_v.state := UNLOCK;
+          cw_v.state  := UNLOCK;
         end if;
 
       when UNLOCK =>
@@ -1217,6 +1217,8 @@ begin
     end if;
 
     if(rising_edge(re.clk_kernel)) then
+      re.readfifo.c.rd_en1 <= re.readfifo.c.rd_en;
+
       if re.readfifo.c.valid = '1' then
         for K in 1 to PE_DEPTH - 1 loop
           readdelay(K) <= readdelay(K - 1);
@@ -1229,7 +1231,7 @@ begin
       re.readfifo.c.rd_en <= '0';
       if(re.readfifo.c.empty = '0') then
         if re.readfifo.c.valid = '1' then
-          if read_delay_count > PE_DEPTH-2 then
+          if read_delay_count > PE_DEPTH-3 then
             if rs.shift_read_buffer = '1' then
               re.readfifo.c.rd_en <= '1';
             end if;
@@ -1238,6 +1240,12 @@ begin
           end if;
         else
           if re.readfifo.c.rd_en = '1' then
+            if read_delay_count > PE_DEPTH-3 then
+              if rs.shift_read_buffer = '1' then
+                re.readfifo.c.rd_en <= '1';
+              end if;
+            end if;
+          elsif re.readfifo.c.rd_en1 = '1' then
             if read_delay_count > PE_DEPTH-2 then
               if rs.shift_read_buffer = '1' then
                 re.readfifo.c.rd_en <= '1';
@@ -1256,7 +1264,7 @@ begin
       end if;
 
       if(read_delay_rst = '1') then
-        read_delay_count <= 1;
+        read_delay_count <= 0;
       end if;
     end if;
   end process;
@@ -1270,6 +1278,8 @@ begin
     end if;
 
     if(rising_edge(re.clk_kernel)) then
+      re.probfifo.c.rd_en1 <= re.probfifo.c.rd_en;
+
       if re.probfifo.c.valid = '1' then
         for K in 1 to PE_DEPTH - 1 loop
           probdelay(K) <= probdelay(K - 1);
@@ -1282,7 +1292,7 @@ begin
       re.probfifo.c.rd_en <= '0';
       if(re.probfifo.c.empty = '0') then
         if re.probfifo.c.valid = '1' then
-          if prob_delay_count > PE_DEPTH-2 then
+          if prob_delay_count > PE_DEPTH-3 then
             if rs.shift_prob_buffer = '1' then
               re.probfifo.c.rd_en <= '1';
             end if;
@@ -1291,6 +1301,12 @@ begin
           end if;
         else
           if re.probfifo.c.rd_en = '1' then
+            if prob_delay_count > PE_DEPTH-3 then
+              if rs.shift_prob_buffer = '1' then
+                re.probfifo.c.rd_en <= '1';
+              end if;
+            end if;
+          elsif re.probfifo.c.rd_en1 = '1' then
             if prob_delay_count > PE_DEPTH-2 then
               if rs.shift_prob_buffer = '1' then
                 re.probfifo.c.rd_en <= '1';
@@ -1309,7 +1325,7 @@ begin
       end if;
 
       if(prob_delay_rst = '1') then
-        prob_delay_count <= 1;
+        prob_delay_count <= 0;
       end if;
     end if;
   end process;
@@ -1323,6 +1339,8 @@ begin
     end if;
 
     if(rising_edge(re.clk_kernel)) then
+      re.haplfifo.c.rd_en1 <= re.haplfifo.c.rd_en;
+
       if re.haplfifo.c.valid = '1' then
         for K in 1 to PE_DEPTH - 1 loop
           hapldelay(K) <= hapldelay(K - 1);
@@ -1335,7 +1353,7 @@ begin
       re.haplfifo.c.rd_en <= '0';
       if(re.haplfifo.c.empty = '0') then
         if re.haplfifo.c.valid = '1' then
-          if hapl_delay_count > PE_DEPTH-2 then
+          if hapl_delay_count > PE_DEPTH-3 then
             if rs.shift_hapl_buffer = '1' then
               re.haplfifo.c.rd_en <= '1';
             end if;
@@ -1344,6 +1362,12 @@ begin
           end if;
         else
           if re.haplfifo.c.rd_en = '1' then
+            if hapl_delay_count > PE_DEPTH-3 then
+              if rs.shift_hapl_buffer = '1' then
+                re.haplfifo.c.rd_en <= '1';
+              end if;
+            end if;
+          elsif re.haplfifo.c.rd_en1 = '1' then
             if hapl_delay_count > PE_DEPTH-2 then
               if rs.shift_hapl_buffer = '1' then
                 re.haplfifo.c.rd_en <= '1';
@@ -1362,7 +1386,7 @@ begin
       end if;
 
       if(hapl_delay_rst = '1') then
-        hapl_delay_count <= 1;
+        hapl_delay_count <= 0;
       end if;
     end if;
   end process;
@@ -1728,13 +1752,13 @@ begin
 
       when SCHED_STARTUP =>
         vs.state     := SCHED_PROCESSING;  -- Go to processing state
-        vs.valid     := '1';     -- Enable data valid on the next cycle
+        vs.valid     := '1';            -- Enable data valid on the next cycle
         vs.cell      := PE_TOP;  -- First cycle we will be at top of matrix
         vs.startflag := '1';
         vs.ybus_en   := '1';
 
       when SCHED_PROCESSING =>
-        if(rs.ybus_addr = rs.leny and rs.schedule = 0) then
+        if(rs.ybus_addr = rs.leny and rs.schedule = PE_DEPTH-1) then
           read_delay_rst <= '1';
           hapl_delay_rst <= '1';
           prob_delay_rst <= '1';
@@ -1745,20 +1769,20 @@ begin
 
         -- Increase PairHMM cycle, except when this is the first cycle, which we can check by looking at the last bit of fifo_rd_en
         -- Everything inside this if statement is triggered when a new cell update cycle starts
-        if vs.schedule = u(PE_DEPTH - 3, PE_DEPTH_BITS) and rs.startflag = '0' and rs.ybus_addr1 < rs.leny then
+        if vs.schedule = u(PE_DEPTH - 4, PE_DEPTH_BITS) and rs.startflag = '0' and rs.ybus_addr1 < rs.leny-1 then
           vs.shift_prob_buffer := '1';
         end if;
 
-        if vs.schedule = u(PE_DEPTH - 2, PE_DEPTH_BITS) and rs.startflag = '0' and rs.ybus_addr1 < rs.leny then
-          vs.shift_read_buffer := '1';
+        if vs.schedule = u(PE_DEPTH - 3, PE_DEPTH_BITS) and rs.startflag = '0' and rs.ybus_addr1 < rs.leny-1 then
           vs.shift_prob_buffer := '0';
+          vs.shift_read_buffer := '1';
 
           if rs.element /= PAIRHMM_NUM_PES - 1 then
             vs.shift_hapl_buffer := '1';
           end if;
         end if;
 
-        if vs.schedule = u(PE_DEPTH - 1, PE_DEPTH_BITS) and rs.startflag = '0' then
+        if vs.schedule = u(PE_DEPTH - 2, PE_DEPTH_BITS) and rs.startflag = '0' then
           vs.shift_read_buffer := '0';
           vs.shift_hapl_buffer := '0';
           vs.shift_prob_buffer := '0';
@@ -1774,7 +1798,7 @@ begin
           if rs.element /= PAIRHMM_NUM_PES - 1 then
             vs.element   := rs.element + 1;  -- Increase processing highest active element in supercolumn counter
             vs.ybus_addr := rs.ybus_addr + 1;  -- Increase X Bus address
-            vs.ybus_en   := '1'; -- Write to next element
+            vs.ybus_en   := '1';        -- Write to next element
           end if;
 
           -- If we are done with the last padded base of X

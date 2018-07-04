@@ -1,7 +1,7 @@
 // Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
 // --------------------------------------------------------------------------------
 // Tool Version: Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
-// Date        : Wed Jul  4 10:17:59 2018
+// Date        : Wed Jul  4 20:09:13 2018
 // Host        : laurens-ubuntu running 64-bit Ubuntu 16.04.4 LTS
 // Command     : write_verilog -force -mode funcsim
 //               /home/laurens/Desktop/project_snap/project_snap.srcs/sources_1/ip/prob_fifo/prob_fifo_sim_netlist.v
@@ -286,8 +286,8 @@ module prob_fifo
   (* C_OPTIMIZATION_MODE = "0" *) 
   (* C_OVERFLOW_LOW = "0" *) 
   (* C_POWER_SAVING_MODE = "0" *) 
-  (* C_PRELOAD_LATENCY = "1" *) 
-  (* C_PRELOAD_REGS = "0" *) 
+  (* C_PRELOAD_LATENCY = "2" *) 
+  (* C_PRELOAD_REGS = "1" *) 
   (* C_PRIM_FIFO_TYPE = "512x72" *) 
   (* C_PRIM_FIFO_TYPE_AXIS = "1kx18" *) 
   (* C_PRIM_FIFO_TYPE_RACH = "512x36" *) 
@@ -351,7 +351,7 @@ module prob_fifo
   (* C_USE_ECC_WACH = "0" *) 
   (* C_USE_ECC_WDCH = "0" *) 
   (* C_USE_ECC_WRCH = "0" *) 
-  (* C_USE_EMBEDDED_REG = "0" *) 
+  (* C_USE_EMBEDDED_REG = "1" *) 
   (* C_USE_FIFO16_FLAGS = "0" *) 
   (* C_USE_FWFT_DATA_COUNT = "0" *) 
   (* C_USE_PIPELINE_REG = "0" *) 
@@ -1510,6 +1510,7 @@ module prob_fifo_blk_mem_gen_generic_cstr
     wr_clk,
     tmp_ram_rd_en,
     E,
+    tmp_ram_regce,
     AS,
     \gc0.count_d1_reg[7] ,
     \gic0.gc0.count_d2_reg[7] ,
@@ -1519,6 +1520,7 @@ module prob_fifo_blk_mem_gen_generic_cstr
   input wr_clk;
   input tmp_ram_rd_en;
   input [0:0]E;
+  input tmp_ram_regce;
   input [0:0]AS;
   input [7:0]\gc0.count_d1_reg[7] ;
   input [7:0]\gic0.gc0.count_d2_reg[7] ;
@@ -1532,6 +1534,7 @@ module prob_fifo_blk_mem_gen_generic_cstr
   wire [7:0]\gic0.gc0.count_d2_reg[7] ;
   wire rd_clk;
   wire tmp_ram_rd_en;
+  wire tmp_ram_regce;
   wire wr_clk;
 
   prob_fifo_blk_mem_gen_prim_width \ramloop[0].ram.r 
@@ -1543,6 +1546,7 @@ module prob_fifo_blk_mem_gen_generic_cstr
         .\gic0.gc0.count_d2_reg[7] (\gic0.gc0.count_d2_reg[7] ),
         .rd_clk(rd_clk),
         .tmp_ram_rd_en(tmp_ram_rd_en),
+        .tmp_ram_regce(tmp_ram_regce),
         .wr_clk(wr_clk));
   prob_fifo_blk_mem_gen_prim_width__parameterized0 \ramloop[1].ram.r 
        (.AS(AS),
@@ -1553,6 +1557,7 @@ module prob_fifo_blk_mem_gen_generic_cstr
         .\gic0.gc0.count_d2_reg[7] (\gic0.gc0.count_d2_reg[7] ),
         .rd_clk(rd_clk),
         .tmp_ram_rd_en(tmp_ram_rd_en),
+        .tmp_ram_regce(tmp_ram_regce),
         .wr_clk(wr_clk));
   prob_fifo_blk_mem_gen_prim_width__parameterized1 \ramloop[2].ram.r 
        (.AS(AS),
@@ -1563,6 +1568,7 @@ module prob_fifo_blk_mem_gen_generic_cstr
         .\gic0.gc0.count_d2_reg[7] (\gic0.gc0.count_d2_reg[7] ),
         .rd_clk(rd_clk),
         .tmp_ram_rd_en(tmp_ram_rd_en),
+        .tmp_ram_regce(tmp_ram_regce),
         .wr_clk(wr_clk));
   prob_fifo_blk_mem_gen_prim_width__parameterized2 \ramloop[3].ram.r 
        (.AS(AS),
@@ -1573,6 +1579,7 @@ module prob_fifo_blk_mem_gen_generic_cstr
         .\gic0.gc0.count_d2_reg[7] (\gic0.gc0.count_d2_reg[7] ),
         .rd_clk(rd_clk),
         .tmp_ram_rd_en(tmp_ram_rd_en),
+        .tmp_ram_regce(tmp_ram_regce),
         .wr_clk(wr_clk));
 endmodule
 
@@ -1583,6 +1590,7 @@ module prob_fifo_blk_mem_gen_prim_width
     wr_clk,
     tmp_ram_rd_en,
     E,
+    tmp_ram_regce,
     AS,
     \gc0.count_d1_reg[7] ,
     \gic0.gc0.count_d2_reg[7] ,
@@ -1592,6 +1600,7 @@ module prob_fifo_blk_mem_gen_prim_width
   input wr_clk;
   input tmp_ram_rd_en;
   input [0:0]E;
+  input tmp_ram_regce;
   input [0:0]AS;
   input [7:0]\gc0.count_d1_reg[7] ;
   input [7:0]\gic0.gc0.count_d2_reg[7] ;
@@ -1605,6 +1614,7 @@ module prob_fifo_blk_mem_gen_prim_width
   wire [7:0]\gic0.gc0.count_d2_reg[7] ;
   wire rd_clk;
   wire tmp_ram_rd_en;
+  wire tmp_ram_regce;
   wire wr_clk;
 
   prob_fifo_blk_mem_gen_prim_wrapper \prim_noinit.ram 
@@ -1616,6 +1626,7 @@ module prob_fifo_blk_mem_gen_prim_width
         .\gic0.gc0.count_d2_reg[7] (\gic0.gc0.count_d2_reg[7] ),
         .rd_clk(rd_clk),
         .tmp_ram_rd_en(tmp_ram_rd_en),
+        .tmp_ram_regce(tmp_ram_regce),
         .wr_clk(wr_clk));
 endmodule
 
@@ -1626,6 +1637,7 @@ module prob_fifo_blk_mem_gen_prim_width__parameterized0
     wr_clk,
     tmp_ram_rd_en,
     E,
+    tmp_ram_regce,
     AS,
     \gc0.count_d1_reg[7] ,
     \gic0.gc0.count_d2_reg[7] ,
@@ -1635,6 +1647,7 @@ module prob_fifo_blk_mem_gen_prim_width__parameterized0
   input wr_clk;
   input tmp_ram_rd_en;
   input [0:0]E;
+  input tmp_ram_regce;
   input [0:0]AS;
   input [7:0]\gc0.count_d1_reg[7] ;
   input [7:0]\gic0.gc0.count_d2_reg[7] ;
@@ -1648,6 +1661,7 @@ module prob_fifo_blk_mem_gen_prim_width__parameterized0
   wire [7:0]\gic0.gc0.count_d2_reg[7] ;
   wire rd_clk;
   wire tmp_ram_rd_en;
+  wire tmp_ram_regce;
   wire wr_clk;
 
   prob_fifo_blk_mem_gen_prim_wrapper__parameterized0 \prim_noinit.ram 
@@ -1659,6 +1673,7 @@ module prob_fifo_blk_mem_gen_prim_width__parameterized0
         .\gic0.gc0.count_d2_reg[7] (\gic0.gc0.count_d2_reg[7] ),
         .rd_clk(rd_clk),
         .tmp_ram_rd_en(tmp_ram_rd_en),
+        .tmp_ram_regce(tmp_ram_regce),
         .wr_clk(wr_clk));
 endmodule
 
@@ -1669,6 +1684,7 @@ module prob_fifo_blk_mem_gen_prim_width__parameterized1
     wr_clk,
     tmp_ram_rd_en,
     E,
+    tmp_ram_regce,
     AS,
     \gc0.count_d1_reg[7] ,
     \gic0.gc0.count_d2_reg[7] ,
@@ -1678,6 +1694,7 @@ module prob_fifo_blk_mem_gen_prim_width__parameterized1
   input wr_clk;
   input tmp_ram_rd_en;
   input [0:0]E;
+  input tmp_ram_regce;
   input [0:0]AS;
   input [7:0]\gc0.count_d1_reg[7] ;
   input [7:0]\gic0.gc0.count_d2_reg[7] ;
@@ -1691,6 +1708,7 @@ module prob_fifo_blk_mem_gen_prim_width__parameterized1
   wire [7:0]\gic0.gc0.count_d2_reg[7] ;
   wire rd_clk;
   wire tmp_ram_rd_en;
+  wire tmp_ram_regce;
   wire wr_clk;
 
   prob_fifo_blk_mem_gen_prim_wrapper__parameterized1 \prim_noinit.ram 
@@ -1702,6 +1720,7 @@ module prob_fifo_blk_mem_gen_prim_width__parameterized1
         .\gic0.gc0.count_d2_reg[7] (\gic0.gc0.count_d2_reg[7] ),
         .rd_clk(rd_clk),
         .tmp_ram_rd_en(tmp_ram_rd_en),
+        .tmp_ram_regce(tmp_ram_regce),
         .wr_clk(wr_clk));
 endmodule
 
@@ -1712,6 +1731,7 @@ module prob_fifo_blk_mem_gen_prim_width__parameterized2
     wr_clk,
     tmp_ram_rd_en,
     E,
+    tmp_ram_regce,
     AS,
     \gc0.count_d1_reg[7] ,
     \gic0.gc0.count_d2_reg[7] ,
@@ -1721,6 +1741,7 @@ module prob_fifo_blk_mem_gen_prim_width__parameterized2
   input wr_clk;
   input tmp_ram_rd_en;
   input [0:0]E;
+  input tmp_ram_regce;
   input [0:0]AS;
   input [7:0]\gc0.count_d1_reg[7] ;
   input [7:0]\gic0.gc0.count_d2_reg[7] ;
@@ -1734,6 +1755,7 @@ module prob_fifo_blk_mem_gen_prim_width__parameterized2
   wire [7:0]\gic0.gc0.count_d2_reg[7] ;
   wire rd_clk;
   wire tmp_ram_rd_en;
+  wire tmp_ram_regce;
   wire wr_clk;
 
   prob_fifo_blk_mem_gen_prim_wrapper__parameterized2 \prim_noinit.ram 
@@ -1745,6 +1767,7 @@ module prob_fifo_blk_mem_gen_prim_width__parameterized2
         .\gic0.gc0.count_d2_reg[7] (\gic0.gc0.count_d2_reg[7] ),
         .rd_clk(rd_clk),
         .tmp_ram_rd_en(tmp_ram_rd_en),
+        .tmp_ram_regce(tmp_ram_regce),
         .wr_clk(wr_clk));
 endmodule
 
@@ -1755,6 +1778,7 @@ module prob_fifo_blk_mem_gen_prim_wrapper
     wr_clk,
     tmp_ram_rd_en,
     E,
+    tmp_ram_regce,
     AS,
     \gc0.count_d1_reg[7] ,
     \gic0.gc0.count_d2_reg[7] ,
@@ -1764,6 +1788,7 @@ module prob_fifo_blk_mem_gen_prim_wrapper
   input wr_clk;
   input tmp_ram_rd_en;
   input [0:0]E;
+  input tmp_ram_regce;
   input [0:0]AS;
   input [7:0]\gc0.count_d1_reg[7] ;
   input [7:0]\gic0.gc0.count_d2_reg[7] ;
@@ -1777,6 +1802,7 @@ module prob_fifo_blk_mem_gen_prim_wrapper
   wire [7:0]\gic0.gc0.count_d2_reg[7] ;
   wire rd_clk;
   wire tmp_ram_rd_en;
+  wire tmp_ram_regce;
   wire wr_clk;
   wire \NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_CASOUTDBITERR_UNCONNECTED ;
   wire \NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_CASOUTSBITERR_UNCONNECTED ;
@@ -1794,8 +1820,8 @@ module prob_fifo_blk_mem_gen_prim_wrapper
     .CASCADE_ORDER_A("NONE"),
     .CASCADE_ORDER_B("NONE"),
     .CLOCK_DOMAINS("INDEPENDENT"),
-    .DOA_REG(0),
-    .DOB_REG(0),
+    .DOA_REG(1),
+    .DOB_REG(1),
     .ENADDRENA("FALSE"),
     .ENADDRENB("FALSE"),
     .EN_ECC_PIPE("FALSE"),
@@ -2015,11 +2041,11 @@ module prob_fifo_blk_mem_gen_prim_wrapper
         .INJECTDBITERR(1'b0),
         .INJECTSBITERR(1'b0),
         .RDADDRECC(\NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_RDADDRECC_UNCONNECTED [8:0]),
-        .REGCEAREGCE(1'b0),
+        .REGCEAREGCE(tmp_ram_regce),
         .REGCEB(1'b0),
-        .RSTRAMARSTRAM(AS),
+        .RSTRAMARSTRAM(1'b0),
         .RSTRAMB(1'b0),
-        .RSTREGARSTREG(1'b0),
+        .RSTREGARSTREG(AS),
         .RSTREGB(1'b0),
         .SBITERR(\NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_SBITERR_UNCONNECTED ),
         .SLEEP(1'b0),
@@ -2034,6 +2060,7 @@ module prob_fifo_blk_mem_gen_prim_wrapper__parameterized0
     wr_clk,
     tmp_ram_rd_en,
     E,
+    tmp_ram_regce,
     AS,
     \gc0.count_d1_reg[7] ,
     \gic0.gc0.count_d2_reg[7] ,
@@ -2043,6 +2070,7 @@ module prob_fifo_blk_mem_gen_prim_wrapper__parameterized0
   input wr_clk;
   input tmp_ram_rd_en;
   input [0:0]E;
+  input tmp_ram_regce;
   input [0:0]AS;
   input [7:0]\gc0.count_d1_reg[7] ;
   input [7:0]\gic0.gc0.count_d2_reg[7] ;
@@ -2056,6 +2084,7 @@ module prob_fifo_blk_mem_gen_prim_wrapper__parameterized0
   wire [7:0]\gic0.gc0.count_d2_reg[7] ;
   wire rd_clk;
   wire tmp_ram_rd_en;
+  wire tmp_ram_regce;
   wire wr_clk;
   wire \NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_CASOUTDBITERR_UNCONNECTED ;
   wire \NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_CASOUTSBITERR_UNCONNECTED ;
@@ -2073,8 +2102,8 @@ module prob_fifo_blk_mem_gen_prim_wrapper__parameterized0
     .CASCADE_ORDER_A("NONE"),
     .CASCADE_ORDER_B("NONE"),
     .CLOCK_DOMAINS("INDEPENDENT"),
-    .DOA_REG(0),
-    .DOB_REG(0),
+    .DOA_REG(1),
+    .DOB_REG(1),
     .ENADDRENA("FALSE"),
     .ENADDRENB("FALSE"),
     .EN_ECC_PIPE("FALSE"),
@@ -2294,11 +2323,11 @@ module prob_fifo_blk_mem_gen_prim_wrapper__parameterized0
         .INJECTDBITERR(1'b0),
         .INJECTSBITERR(1'b0),
         .RDADDRECC(\NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_RDADDRECC_UNCONNECTED [8:0]),
-        .REGCEAREGCE(1'b0),
+        .REGCEAREGCE(tmp_ram_regce),
         .REGCEB(1'b0),
-        .RSTRAMARSTRAM(AS),
+        .RSTRAMARSTRAM(1'b0),
         .RSTRAMB(1'b0),
-        .RSTREGARSTREG(1'b0),
+        .RSTREGARSTREG(AS),
         .RSTREGB(1'b0),
         .SBITERR(\NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_SBITERR_UNCONNECTED ),
         .SLEEP(1'b0),
@@ -2313,6 +2342,7 @@ module prob_fifo_blk_mem_gen_prim_wrapper__parameterized1
     wr_clk,
     tmp_ram_rd_en,
     E,
+    tmp_ram_regce,
     AS,
     \gc0.count_d1_reg[7] ,
     \gic0.gc0.count_d2_reg[7] ,
@@ -2322,6 +2352,7 @@ module prob_fifo_blk_mem_gen_prim_wrapper__parameterized1
   input wr_clk;
   input tmp_ram_rd_en;
   input [0:0]E;
+  input tmp_ram_regce;
   input [0:0]AS;
   input [7:0]\gc0.count_d1_reg[7] ;
   input [7:0]\gic0.gc0.count_d2_reg[7] ;
@@ -2335,6 +2366,7 @@ module prob_fifo_blk_mem_gen_prim_wrapper__parameterized1
   wire [7:0]\gic0.gc0.count_d2_reg[7] ;
   wire rd_clk;
   wire tmp_ram_rd_en;
+  wire tmp_ram_regce;
   wire wr_clk;
   wire \NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_CASOUTDBITERR_UNCONNECTED ;
   wire \NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_CASOUTSBITERR_UNCONNECTED ;
@@ -2352,8 +2384,8 @@ module prob_fifo_blk_mem_gen_prim_wrapper__parameterized1
     .CASCADE_ORDER_A("NONE"),
     .CASCADE_ORDER_B("NONE"),
     .CLOCK_DOMAINS("INDEPENDENT"),
-    .DOA_REG(0),
-    .DOB_REG(0),
+    .DOA_REG(1),
+    .DOB_REG(1),
     .ENADDRENA("FALSE"),
     .ENADDRENB("FALSE"),
     .EN_ECC_PIPE("FALSE"),
@@ -2573,11 +2605,11 @@ module prob_fifo_blk_mem_gen_prim_wrapper__parameterized1
         .INJECTDBITERR(1'b0),
         .INJECTSBITERR(1'b0),
         .RDADDRECC(\NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_RDADDRECC_UNCONNECTED [8:0]),
-        .REGCEAREGCE(1'b0),
+        .REGCEAREGCE(tmp_ram_regce),
         .REGCEB(1'b0),
-        .RSTRAMARSTRAM(AS),
+        .RSTRAMARSTRAM(1'b0),
         .RSTRAMB(1'b0),
-        .RSTREGARSTREG(1'b0),
+        .RSTREGARSTREG(AS),
         .RSTREGB(1'b0),
         .SBITERR(\NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_SBITERR_UNCONNECTED ),
         .SLEEP(1'b0),
@@ -2592,6 +2624,7 @@ module prob_fifo_blk_mem_gen_prim_wrapper__parameterized2
     wr_clk,
     tmp_ram_rd_en,
     E,
+    tmp_ram_regce,
     AS,
     \gc0.count_d1_reg[7] ,
     \gic0.gc0.count_d2_reg[7] ,
@@ -2601,6 +2634,7 @@ module prob_fifo_blk_mem_gen_prim_wrapper__parameterized2
   input wr_clk;
   input tmp_ram_rd_en;
   input [0:0]E;
+  input tmp_ram_regce;
   input [0:0]AS;
   input [7:0]\gc0.count_d1_reg[7] ;
   input [7:0]\gic0.gc0.count_d2_reg[7] ;
@@ -2646,6 +2680,7 @@ module prob_fifo_blk_mem_gen_prim_wrapper__parameterized2
   wire [7:0]\gic0.gc0.count_d2_reg[7] ;
   wire rd_clk;
   wire tmp_ram_rd_en;
+  wire tmp_ram_regce;
   wire wr_clk;
   wire \NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_CASOUTDBITERR_UNCONNECTED ;
   wire \NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_CASOUTSBITERR_UNCONNECTED ;
@@ -2663,8 +2698,8 @@ module prob_fifo_blk_mem_gen_prim_wrapper__parameterized2
     .CASCADE_ORDER_A("NONE"),
     .CASCADE_ORDER_B("NONE"),
     .CLOCK_DOMAINS("INDEPENDENT"),
-    .DOA_REG(0),
-    .DOB_REG(0),
+    .DOA_REG(1),
+    .DOB_REG(1),
     .ENADDRENA("FALSE"),
     .ENADDRENB("FALSE"),
     .EN_ECC_PIPE("FALSE"),
@@ -2884,11 +2919,11 @@ module prob_fifo_blk_mem_gen_prim_wrapper__parameterized2
         .INJECTDBITERR(1'b0),
         .INJECTSBITERR(1'b0),
         .RDADDRECC(\NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_RDADDRECC_UNCONNECTED [8:0]),
-        .REGCEAREGCE(1'b0),
+        .REGCEAREGCE(tmp_ram_regce),
         .REGCEB(1'b0),
-        .RSTRAMARSTRAM(AS),
+        .RSTRAMARSTRAM(1'b0),
         .RSTRAMB(1'b0),
-        .RSTREGARSTREG(1'b0),
+        .RSTREGARSTREG(AS),
         .RSTREGB(1'b0),
         .SBITERR(\NLW_DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_SBITERR_UNCONNECTED ),
         .SLEEP(1'b0),
@@ -2903,6 +2938,7 @@ module prob_fifo_blk_mem_gen_top
     wr_clk,
     tmp_ram_rd_en,
     E,
+    tmp_ram_regce,
     AS,
     \gc0.count_d1_reg[7] ,
     \gic0.gc0.count_d2_reg[7] ,
@@ -2912,6 +2948,7 @@ module prob_fifo_blk_mem_gen_top
   input wr_clk;
   input tmp_ram_rd_en;
   input [0:0]E;
+  input tmp_ram_regce;
   input [0:0]AS;
   input [7:0]\gc0.count_d1_reg[7] ;
   input [7:0]\gic0.gc0.count_d2_reg[7] ;
@@ -2925,6 +2962,7 @@ module prob_fifo_blk_mem_gen_top
   wire [7:0]\gic0.gc0.count_d2_reg[7] ;
   wire rd_clk;
   wire tmp_ram_rd_en;
+  wire tmp_ram_regce;
   wire wr_clk;
 
   prob_fifo_blk_mem_gen_generic_cstr \valid.cstr 
@@ -2936,6 +2974,7 @@ module prob_fifo_blk_mem_gen_top
         .\gic0.gc0.count_d2_reg[7] (\gic0.gc0.count_d2_reg[7] ),
         .rd_clk(rd_clk),
         .tmp_ram_rd_en(tmp_ram_rd_en),
+        .tmp_ram_regce(tmp_ram_regce),
         .wr_clk(wr_clk));
 endmodule
 
@@ -2946,6 +2985,7 @@ module prob_fifo_blk_mem_gen_v8_4_1
     wr_clk,
     tmp_ram_rd_en,
     E,
+    tmp_ram_regce,
     AS,
     \gc0.count_d1_reg[7] ,
     \gic0.gc0.count_d2_reg[7] ,
@@ -2955,6 +2995,7 @@ module prob_fifo_blk_mem_gen_v8_4_1
   input wr_clk;
   input tmp_ram_rd_en;
   input [0:0]E;
+  input tmp_ram_regce;
   input [0:0]AS;
   input [7:0]\gc0.count_d1_reg[7] ;
   input [7:0]\gic0.gc0.count_d2_reg[7] ;
@@ -2968,6 +3009,7 @@ module prob_fifo_blk_mem_gen_v8_4_1
   wire [7:0]\gic0.gc0.count_d2_reg[7] ;
   wire rd_clk;
   wire tmp_ram_rd_en;
+  wire tmp_ram_regce;
   wire wr_clk;
 
   prob_fifo_blk_mem_gen_v8_4_1_synth inst_blk_mem_gen
@@ -2979,6 +3021,7 @@ module prob_fifo_blk_mem_gen_v8_4_1
         .\gic0.gc0.count_d2_reg[7] (\gic0.gc0.count_d2_reg[7] ),
         .rd_clk(rd_clk),
         .tmp_ram_rd_en(tmp_ram_rd_en),
+        .tmp_ram_regce(tmp_ram_regce),
         .wr_clk(wr_clk));
 endmodule
 
@@ -2989,6 +3032,7 @@ module prob_fifo_blk_mem_gen_v8_4_1_synth
     wr_clk,
     tmp_ram_rd_en,
     E,
+    tmp_ram_regce,
     AS,
     \gc0.count_d1_reg[7] ,
     \gic0.gc0.count_d2_reg[7] ,
@@ -2998,6 +3042,7 @@ module prob_fifo_blk_mem_gen_v8_4_1_synth
   input wr_clk;
   input tmp_ram_rd_en;
   input [0:0]E;
+  input tmp_ram_regce;
   input [0:0]AS;
   input [7:0]\gc0.count_d1_reg[7] ;
   input [7:0]\gic0.gc0.count_d2_reg[7] ;
@@ -3011,6 +3056,7 @@ module prob_fifo_blk_mem_gen_v8_4_1_synth
   wire [7:0]\gic0.gc0.count_d2_reg[7] ;
   wire rd_clk;
   wire tmp_ram_rd_en;
+  wire tmp_ram_regce;
   wire wr_clk;
 
   prob_fifo_blk_mem_gen_top \gnbram.gnativebmg.native_blk_mem_gen 
@@ -3022,6 +3068,7 @@ module prob_fifo_blk_mem_gen_v8_4_1_synth
         .\gic0.gc0.count_d2_reg[7] (\gic0.gc0.count_d2_reg[7] ),
         .rd_clk(rd_clk),
         .tmp_ram_rd_en(tmp_ram_rd_en),
+        .tmp_ram_regce(tmp_ram_regce),
         .wr_clk(wr_clk));
 endmodule
 
@@ -3281,6 +3328,7 @@ module prob_fifo_fifo_generator_ramfifo
   wire full;
   wire \gntv_or_sync_fifo.gcx.clkx_n_0 ;
   wire \gntv_or_sync_fifo.gcx.clkx_n_7 ;
+  wire \gntv_or_sync_fifo.gl0.rd_n_4 ;
   wire \gntv_or_sync_fifo.gl0.wr_n_1 ;
   wire \gntv_or_sync_fifo.gl0.wr_n_12 ;
   wire \gntv_or_sync_fifo.gl0.wr_n_13 ;
@@ -3293,6 +3341,7 @@ module prob_fifo_fifo_generator_ramfifo
   wire p_20_out;
   wire [7:2]p_25_out;
   wire p_2_out;
+  wire ram_rd_en_d1;
   wire rd_clk;
   wire rd_en;
   wire [7:0]rd_pntr_plus1;
@@ -3302,6 +3351,7 @@ module prob_fifo_fifo_generator_ramfifo
   wire rstblk_n_0;
   wire \syncstages_ff_reg[0] ;
   wire tmp_ram_rd_en;
+  wire tmp_ram_regce;
   wire underflow;
   wire valid;
   wire wr_ack;
@@ -3328,12 +3378,14 @@ module prob_fifo_fifo_generator_ramfifo
   prob_fifo_rd_logic \gntv_or_sync_fifo.gl0.rd 
        (.AS(\syncstages_ff_reg[0] ),
         .\DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram (p_0_out),
+        .E(\gntv_or_sync_fifo.gl0.rd_n_4 ),
         .Q(rd_pntr_plus1),
         .empty(empty),
         .out(p_2_out),
         .ram_empty_fb_i_reg(\gntv_or_sync_fifo.gcx.clkx_n_7 ),
         .rd_clk(rd_clk),
         .rd_en(rd_en),
+        .tmp_ram_rd_en(tmp_ram_rd_en),
         .underflow(underflow),
         .valid(valid));
   prob_fifo_wr_logic \gntv_or_sync_fifo.gl0.wr 
@@ -3361,8 +3413,11 @@ module prob_fifo_fifo_generator_ramfifo
         .dout(dout),
         .\gc0.count_d1_reg[7] (p_0_out),
         .\gic0.gc0.count_d2_reg[7] (p_13_out),
+        .ram_empty_fb_i_reg(\gntv_or_sync_fifo.gl0.rd_n_4 ),
+        .ram_rd_en_d1(ram_rd_en_d1),
         .rd_clk(rd_clk),
         .tmp_ram_rd_en(tmp_ram_rd_en),
+        .tmp_ram_regce(tmp_ram_regce),
         .wr_clk(wr_clk));
   prob_fifo_reset_blk_ramfifo rstblk
        (.AR(rstblk_n_0),
@@ -3370,13 +3425,12 @@ module prob_fifo_fifo_generator_ramfifo
         .\grstd1.grst_full.grst_f.rst_d1_reg_0 (\grstd1.grst_full.grst_f.rst_d1_reg ),
         .out(rst_full_ff_i),
         .p_1_out(\gwhf.whf/p_1_out ),
-        .ram_empty_fb_i_reg(p_2_out),
         .ram_full_fb_i_reg(rst_full_gen_i),
         .ram_full_fb_i_reg_0(\gntv_or_sync_fifo.gl0.wr_n_1 ),
+        .ram_rd_en_d1(ram_rd_en_d1),
         .rd_clk(rd_clk),
-        .rd_en(rd_en),
         .rst(rst),
-        .tmp_ram_rd_en(tmp_ram_rd_en),
+        .tmp_ram_regce(tmp_ram_regce),
         .wr_clk(wr_clk),
         .wr_en(wr_en));
 endmodule
@@ -3485,7 +3539,7 @@ endmodule
 (* C_IMPLEMENTATION_TYPE_WRCH = "1" *) (* C_INIT_WR_PNTR_VAL = "0" *) (* C_INTERFACE_TYPE = "0" *) 
 (* C_MEMORY_TYPE = "1" *) (* C_MIF_FILE_NAME = "BlankString" *) (* C_MSGON_VAL = "1" *) 
 (* C_OPTIMIZATION_MODE = "0" *) (* C_OVERFLOW_LOW = "0" *) (* C_POWER_SAVING_MODE = "0" *) 
-(* C_PRELOAD_LATENCY = "1" *) (* C_PRELOAD_REGS = "0" *) (* C_PRIM_FIFO_TYPE = "512x72" *) 
+(* C_PRELOAD_LATENCY = "2" *) (* C_PRELOAD_REGS = "1" *) (* C_PRIM_FIFO_TYPE = "512x72" *) 
 (* C_PRIM_FIFO_TYPE_AXIS = "1kx18" *) (* C_PRIM_FIFO_TYPE_RACH = "512x36" *) (* C_PRIM_FIFO_TYPE_RDCH = "512x72" *) 
 (* C_PRIM_FIFO_TYPE_WACH = "512x36" *) (* C_PRIM_FIFO_TYPE_WDCH = "512x72" *) (* C_PRIM_FIFO_TYPE_WRCH = "512x36" *) 
 (* C_PROG_EMPTY_THRESH_ASSERT_VAL = "2" *) (* C_PROG_EMPTY_THRESH_ASSERT_VAL_AXIS = "1022" *) (* C_PROG_EMPTY_THRESH_ASSERT_VAL_RACH = "1022" *) 
@@ -3506,7 +3560,7 @@ endmodule
 (* C_USE_COMMON_OVERFLOW = "0" *) (* C_USE_COMMON_UNDERFLOW = "0" *) (* C_USE_DEFAULT_SETTINGS = "0" *) 
 (* C_USE_DOUT_RST = "1" *) (* C_USE_ECC = "0" *) (* C_USE_ECC_AXIS = "0" *) 
 (* C_USE_ECC_RACH = "0" *) (* C_USE_ECC_RDCH = "0" *) (* C_USE_ECC_WACH = "0" *) 
-(* C_USE_ECC_WDCH = "0" *) (* C_USE_ECC_WRCH = "0" *) (* C_USE_EMBEDDED_REG = "0" *) 
+(* C_USE_ECC_WDCH = "0" *) (* C_USE_ECC_WRCH = "0" *) (* C_USE_EMBEDDED_REG = "1" *) 
 (* C_USE_FIFO16_FLAGS = "0" *) (* C_USE_FWFT_DATA_COUNT = "0" *) (* C_USE_PIPELINE_REG = "0" *) 
 (* C_VALID_LOW = "0" *) (* C_WACH_TYPE = "0" *) (* C_WDCH_TYPE = "0" *) 
 (* C_WRCH_TYPE = "0" *) (* C_WR_ACK_LOW = "0" *) (* C_WR_DATA_COUNT_WIDTH = "8" *) 
@@ -4603,23 +4657,29 @@ endmodule
 (* ORIG_REF_NAME = "memory" *) 
 module prob_fifo_memory
    (dout,
+    ram_rd_en_d1,
     rd_clk,
     wr_clk,
     tmp_ram_rd_en,
     E,
+    tmp_ram_regce,
     AS,
     \gc0.count_d1_reg[7] ,
     \gic0.gc0.count_d2_reg[7] ,
-    din);
+    din,
+    ram_empty_fb_i_reg);
   output [255:0]dout;
+  output ram_rd_en_d1;
   input rd_clk;
   input wr_clk;
   input tmp_ram_rd_en;
   input [0:0]E;
+  input tmp_ram_regce;
   input [0:0]AS;
   input [7:0]\gc0.count_d1_reg[7] ;
   input [7:0]\gic0.gc0.count_d2_reg[7] ;
   input [255:0]din;
+  input [0:0]ram_empty_fb_i_reg;
 
   wire [0:0]AS;
   wire [0:0]E;
@@ -4627,11 +4687,14 @@ module prob_fifo_memory
   wire [255:0]dout;
   wire [7:0]\gc0.count_d1_reg[7] ;
   wire [7:0]\gic0.gc0.count_d2_reg[7] ;
+  wire [0:0]ram_empty_fb_i_reg;
+  wire ram_rd_en_d1;
   wire rd_clk;
   wire tmp_ram_rd_en;
+  wire tmp_ram_regce;
   wire wr_clk;
 
-  prob_fifo_blk_mem_gen_v8_4_1 \gbm.gbmg.gbmga.ngecc.bmg 
+  prob_fifo_blk_mem_gen_v8_4_1 \gbm.gbmg.gbmgc.ngecc.bmg 
        (.AS(AS),
         .E(E),
         .din(din),
@@ -4640,7 +4703,16 @@ module prob_fifo_memory
         .\gic0.gc0.count_d2_reg[7] (\gic0.gc0.count_d2_reg[7] ),
         .rd_clk(rd_clk),
         .tmp_ram_rd_en(tmp_ram_rd_en),
+        .tmp_ram_regce(tmp_ram_regce),
         .wr_clk(wr_clk));
+  FDCE #(
+    .INIT(1'b0)) 
+    \gbm.gregce.ram_rd_en_d1_reg 
+       (.C(rd_clk),
+        .CE(1'b1),
+        .CLR(AS),
+        .D(ram_empty_fb_i_reg),
+        .Q(ram_rd_en_d1));
 endmodule
 
 (* ORIG_REF_NAME = "rd_bin_cntr" *) 
@@ -4886,6 +4958,7 @@ module prob_fifo_rd_handshaking_flags
   wire [0:0]AS;
   wire p_1_out;
   wire ram_empty_i_reg;
+  wire ram_valid_d1;
   wire rd_clk;
   wire underflow;
   wire valid;
@@ -4905,6 +4978,14 @@ module prob_fifo_rd_handshaking_flags
         .CE(1'b1),
         .CLR(AS),
         .D(ram_empty_i_reg),
+        .Q(ram_valid_d1));
+  FDCE #(
+    .INIT(1'b0)) 
+    \gvep1.ram_valid_d2_reg 
+       (.C(rd_clk),
+        .CE(1'b1),
+        .CLR(AS),
+        .D(ram_valid_d1),
         .Q(valid));
 endmodule
 
@@ -4914,6 +4995,8 @@ module prob_fifo_rd_logic
     out,
     valid,
     underflow,
+    E,
+    tmp_ram_rd_en,
     Q,
     \DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram ,
     ram_empty_fb_i_reg,
@@ -4924,6 +5007,8 @@ module prob_fifo_rd_logic
   output out;
   output valid;
   output underflow;
+  output [0:0]E;
+  output tmp_ram_rd_en;
   output [7:0]Q;
   output [7:0]\DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram ;
   input ram_empty_fb_i_reg;
@@ -4933,28 +5018,30 @@ module prob_fifo_rd_logic
 
   wire [0:0]AS;
   wire [7:0]\DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram ;
+  wire [0:0]E;
   wire [7:0]Q;
   wire empty;
-  wire \gras.rsts_n_2 ;
   wire \gras.rsts_n_3 ;
   wire out;
   wire p_1_out;
   wire ram_empty_fb_i_reg;
   wire rd_clk;
   wire rd_en;
+  wire tmp_ram_rd_en;
   wire underflow;
   wire valid;
 
   prob_fifo_rd_status_flags_as \gras.rsts 
        (.AS(AS),
-        .E(\gras.rsts_n_2 ),
+        .E(E),
         .empty(empty),
         .\gv.ram_valid_d1_reg (\gras.rsts_n_3 ),
         .out(out),
         .p_1_out(p_1_out),
         .ram_empty_fb_i_reg_0(ram_empty_fb_i_reg),
         .rd_clk(rd_clk),
-        .rd_en(rd_en));
+        .rd_en(rd_en),
+        .tmp_ram_rd_en(tmp_ram_rd_en));
   prob_fifo_rd_handshaking_flags \grhf.rhf 
        (.AS(AS),
         .p_1_out(p_1_out),
@@ -4965,7 +5052,7 @@ module prob_fifo_rd_logic
   prob_fifo_rd_bin_cntr rpntr
        (.AS(AS),
         .\DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram (\DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram ),
-        .E(\gras.rsts_n_2 ),
+        .E(E),
         .Q(Q),
         .rd_clk(rd_clk));
 endmodule
@@ -4976,6 +5063,7 @@ module prob_fifo_rd_status_flags_as
     out,
     E,
     \gv.ram_valid_d1_reg ,
+    tmp_ram_rd_en,
     p_1_out,
     ram_empty_fb_i_reg_0,
     rd_clk,
@@ -4985,6 +5073,7 @@ module prob_fifo_rd_status_flags_as
   output out;
   output [0:0]E;
   output \gv.ram_valid_d1_reg ;
+  output tmp_ram_rd_en;
   output p_1_out;
   input ram_empty_fb_i_reg_0;
   input rd_clk;
@@ -5000,12 +5089,20 @@ module prob_fifo_rd_status_flags_as
   (* DONT_TOUCH *) wire ram_empty_i;
   wire rd_clk;
   wire rd_en;
+  wire tmp_ram_rd_en;
 
   assign empty = ram_empty_i;
   assign out = ram_empty_fb_i;
+  LUT3 #(
+    .INIT(8'hF4)) 
+    \DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_i_1 
+       (.I0(ram_empty_fb_i),
+        .I1(rd_en),
+        .I2(AS),
+        .O(tmp_ram_rd_en));
   LUT2 #(
     .INIT(4'h2)) 
-    \gc0.count_d1[7]_i_1 
+    \gbm.gregce.ram_rd_en_d1_i_1 
        (.I0(rd_en),
         .I1(ram_empty_fb_i),
         .O(E));
@@ -5054,28 +5151,26 @@ module prob_fifo_reset_blk_ramfifo
     ram_full_fb_i_reg,
     \grstd1.grst_full.grst_f.rst_d1_reg_0 ,
     p_1_out,
-    tmp_ram_rd_en,
+    tmp_ram_regce,
     rst,
     wr_clk,
     rd_clk,
     ram_full_fb_i_reg_0,
     wr_en,
-    ram_empty_fb_i_reg,
-    rd_en);
+    ram_rd_en_d1);
   output [0:0]AR;
   output [0:0]AS;
   output out;
   output ram_full_fb_i_reg;
   output \grstd1.grst_full.grst_f.rst_d1_reg_0 ;
   output p_1_out;
-  output tmp_ram_rd_en;
+  output tmp_ram_regce;
   input rst;
   input wr_clk;
   input rd_clk;
   input ram_full_fb_i_reg_0;
   input wr_en;
-  input ram_empty_fb_i_reg;
-  input rd_en;
+  input ram_rd_en_d1;
 
   wire [0:0]AR;
   wire [0:0]AS;
@@ -5086,10 +5181,9 @@ module prob_fifo_reset_blk_ramfifo
   wire \ngwrdrst.grst.g7serrst.gnsckt_wrst.gic_rst.sckt_wr_rst_ic_i_1_n_0 ;
   wire \ngwrdrst.grst.g7serrst.gnsckt_wrst.gic_rst.wr_rst_busy_i_i_1_n_0 ;
   wire p_1_out;
-  wire ram_empty_fb_i_reg;
   wire ram_full_fb_i_reg_0;
+  wire ram_rd_en_d1;
   wire rd_clk;
-  wire rd_en;
   wire [3:0]rd_rst_wr_ext;
   wire rst;
   (* async_reg = "true" *) (* msgon = "true" *) wire rst_d1;
@@ -5098,7 +5192,7 @@ module prob_fifo_reset_blk_ramfifo
   (* async_reg = "true" *) (* msgon = "true" *) wire rst_rd_reg2;
   (* async_reg = "true" *) (* msgon = "true" *) wire rst_wr_reg2;
   wire sckt_rd_rst_wr;
-  wire tmp_ram_rd_en;
+  wire tmp_ram_regce;
   wire wr_clk;
   wire wr_en;
   wire [1:0]wr_rst_rd_ext;
@@ -5106,13 +5200,12 @@ module prob_fifo_reset_blk_ramfifo
   assign out = rst_d2;
   assign ram_full_fb_i_reg = rst_d3;
   (* SOFT_HLUTNM = "soft_lutpair12" *) 
-  LUT3 #(
-    .INIT(8'hBA)) 
-    \DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_i_1 
+  LUT2 #(
+    .INIT(4'hE)) 
+    \DEVICE_8SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_i_3 
        (.I0(AS),
-        .I1(ram_empty_fb_i_reg),
-        .I2(rd_en),
-        .O(tmp_ram_rd_en));
+        .I1(ram_rd_en_d1),
+        .O(tmp_ram_regce));
   LUT3 #(
     .INIT(8'hE0)) 
     \gof.gof1.overflow_i_i_1 
