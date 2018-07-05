@@ -1,14 +1,14 @@
 -- Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
--- Date        : Wed Jul  4 20:05:42 2018
+-- Date        : Thu Jul  5 09:47:44 2018
 -- Host        : laurens-ubuntu running 64-bit Ubuntu 16.04.4 LTS
 -- Command     : write_vhdl -force -mode funcsim
 --               /home/laurens/Desktop/project_snap/project_snap.srcs/sources_1/ip/base_fifo/base_fifo_sim_netlist.vhdl
 -- Design      : base_fifo
 -- Purpose     : This VHDL netlist is a functional simulation representation of the design and should not be modified or
 --               synthesized. This netlist cannot be used for SDF annotated simulation.
--- Device      : xcku115-flva1517-2-e
+-- Device      : xcku060-ffva1156-2-e
 -- --------------------------------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;

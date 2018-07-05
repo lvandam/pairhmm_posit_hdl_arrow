@@ -1,13 +1,13 @@
 // Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
 // --------------------------------------------------------------------------------
 // Tool Version: Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
-// Date        : Tue Jun 19 15:11:36 2018
+// Date        : Thu Jul  5 09:48:16 2018
 // Host        : laurens-ubuntu running 64-bit Ubuntu 16.04.4 LTS
 // Command     : write_verilog -force -mode synth_stub
 //               /home/laurens/Desktop/project_snap/project_snap.srcs/sources_1/ip/feedback_fifo/feedback_fifo_stub.v
 // Design      : feedback_fifo
 // Purpose     : Stub declaration of top-level module interface
-// Device      : xcku115-flva1517-2-e
+// Device      : xcku060-ffva1156-2-e
 // --------------------------------------------------------------------------------
 
 // This empty module with port declaration file causes synthesis tools to infer a black box for IP.
