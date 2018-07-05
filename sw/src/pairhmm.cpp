@@ -165,7 +165,6 @@ int main(int argc, char ** argv)
         std::vector<uint32_t *> result_hw(roundToMultiple(CORES, 2));
         for(int i = 0; i < roundToMultiple(CORES, 2); i++) {
                 rc = posix_memalign((void * * ) &(result_hw[i]), BURST_LENGTH, sizeof(uint32_t) * num_rows);
-                cout << rc << endl;
                 // clear values buffer
                 for (uint32_t j = 0; j < num_rows; j++) {
                         result_hw[i][j] = 0xDEADBEEF;

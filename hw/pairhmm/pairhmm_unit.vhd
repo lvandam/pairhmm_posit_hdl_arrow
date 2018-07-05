@@ -141,6 +141,9 @@ architecture pairhmm_unit of pairhmm_unit is
 
   signal r_batch_offset : std_logic_vector(REG_WIDTH - 1 downto 0);  -- To retrieve the correct data from Arrow columns
 
+  -- Batch information
+  signal r_x_len, r_y_len, r_x_size, r_x_padded, r_y_size, r_y_padded, r_x_bppadded, r_initial : std_logic_vector(REG_WIDTH - 1 downto 0);
+
   -----------------------------------------------------------------------------
   -- HAPLO STREAMS
   -----------------------------------------------------------------------------
@@ -813,6 +816,16 @@ begin
 
       r_batch_offset <= batch_offset;
 
+      -- Batch information
+      r_x_len      <= x_len;
+      r_y_len      <= y_len;
+      r_x_size     <= x_size;
+      r_x_padded   <= x_padded;
+      r_y_size     <= y_size;
+      r_y_padded   <= y_padded;
+      r_x_bppadded <= x_bppadded;
+      r_initial    <= initial;
+
       if control_reset = '1' then
         cu_reset(r);
         cr_r.reset_units <= '1';
@@ -938,9 +951,10 @@ begin
   end process;
 
   loader_comb : process(r,
-                        rs,
+                        rs.state,
                         cr_r,
-                        control_start,
+                        r_control_start,
+                        r_control_reset,
                         cmd_hapl_ready,
                         cmd_read_ready,
                         str_hapl_elem_in,
@@ -949,9 +963,7 @@ begin
                         r_read_off_hi, r_read_off_lo,
                         r_hapl_bp_hi, r_hapl_bp_lo,
                         r_read_bp_hi, r_read_bp_lo,
-                        r_read_probs_hi, r_read_probs_lo,
-                        r_control_start,
-                        r_control_reset)
+                        r_read_probs_hi, r_read_probs_lo)
     variable v    : cu_int;
     variable cr_v : reg;
   begin
@@ -991,7 +1003,7 @@ begin
         cr_v.reset_units := '1';
 
         -- When start signal is received:
-        if control_start = '1' then
+        if r_control_start = '1' then
           v.state             := LOAD_RESET_START;
           cr_v.cs.reset_start := '1';
         end if;
@@ -1002,23 +1014,23 @@ begin
 
         cr_v.reset_units := '0';
 
-        if control_start = '0' then
+        if r_control_start = '0' then
           v.state := LOAD_LOAD_INIT;
         end if;
 
       -- State to register the initial values of the first row of D
       when LOAD_LOAD_INIT =>
-        v.initial := initial;
+        v.initial := r_initial;
 
         v.wed.batches_total := to_unsigned(2, 32);  -- TODO make this variable
         v.wed.batches       := to_unsigned(2, 32);  -- TODO make this variable
-        v.inits.x_len       := u(x_len);
-        v.inits.y_len       := u(y_len);
-        v.inits.x_size      := u(x_size);
-        v.inits.x_padded    := u(x_padded);
-        v.inits.y_size      := u(y_size);
-        v.inits.y_padded    := u(y_padded);
-        v.inits.x_bppadded  := u(x_bppadded);
+        v.inits.x_len       := u(r_x_len);
+        v.inits.y_len       := u(r_y_len);
+        v.inits.x_size      := u(r_x_size);
+        v.inits.x_padded    := u(r_x_padded);
+        v.inits.y_size      := u(r_y_size);
+        v.inits.y_padded    := u(r_y_padded);
+        v.inits.x_bppadded  := u(r_x_bppadded);
 
         v.state := LOAD_REQUEST_DATA;
 
@@ -1067,9 +1079,9 @@ begin
         cr_v.command_read.valid := '1';
 
         -- Wait for command accepted
-        if cr_v.command_hapl.ready = '1' and cr_v.command_read.ready = '1' then
-          dumpStdOut("Requested haplotype arrays: " & integer'image(int(cr_v.command_hapl.firstIdx)) & " ... " & integer'image(int(cr_v.command_hapl.lastIdx)));
-          dumpStdOut("Requested read arrays: " & integer'image(int(cr_v.command_read.firstIdx)) & " ... " & integer'image(int(cr_v.command_read.lastIdx)));
+        if cr_r.command_hapl.ready = '1' and cr_r.command_read.ready = '1' then
+          -- dumpStdOut("Requested haplotype arrays: " & integer'image(int(cr_r.command_hapl.firstIdx)) & " ... " & integer'image(int(cr_v.command_hapl.lastIdx)));
+          -- dumpStdOut("Requested read arrays: " & integer'image(int(cr_r.command_read.firstIdx)) & " ... " & integer'image(int(cr_v.command_read.lastIdx)));
 
           v.state := LOAD_LOADX_LOADY;  -- Load reads and haplotypes
         end if;
@@ -1092,10 +1104,10 @@ begin
         cr_v.str_read_elem_out.data.ready := '1';
 
         -- Store the bases of the haplotype in the RAM
-        if v.y_reads /= v.inits.y_padded + v.inits.y_len - 1 and cr_v.str_hapl_elem_in.utf8.valid = '1' then
+        if r.y_reads /= r.inits.y_padded + r.inits.y_len - 1 and cr_r.str_hapl_elem_in.utf8.valid = '1' then
           v.y_reads   := r.y_reads + 1;
           v.hapl_wren := "1";
-          v.hapl_data := cr_v.str_hapl_elem_in.utf8.data(7 downto 0);
+          v.hapl_data := cr_r.str_hapl_elem_in.utf8.data(7 downto 0);
         else
           v.y_reads   := r.y_reads;
           v.hapl_wren := "0";
@@ -1103,10 +1115,10 @@ begin
         end if;
 
         -- Store the bases of the read in the RAM
-        if v.x_reads /= v.inits.x_padded + v.inits.x_len - 1 and cr_v.str_read_elem_in.data.valid = '1' then
+        if r.x_reads /= r.inits.x_padded + r.inits.x_len - 1 and cr_r.str_read_elem_in.data.valid = '1' then
           v.x_reads   := r.x_reads + 1;
           v.read_wren := "1";
-          v.read_data := cr_v.str_read_elem_in.data.bp(7 downto 0);
+          v.read_data := cr_r.str_read_elem_in.data.bp(7 downto 0);
         else
           v.x_reads   := r.x_reads;
           v.read_wren := "0";
@@ -1116,24 +1128,24 @@ begin
         -- Store the probabilities of the read in the RAM
         -- Probabilities load:
         -- Enable FIFO read if read is valid:
-        if v.p_reads /= v.inits.x_padded + v.inits.x_len - 1 and cr_v.str_read_elem_in.data.valid = '1' then
+        if r.p_reads /= r.inits.x_padded + r.inits.x_len - 1 and cr_r.str_read_elem_in.data.valid = '1' then
           v.p_reads   := r.p_reads + 1;
           v.prob_wren := '1';
 
-          v.prob_data := cr_v.str_read_elem_in.data.prob.eta
-                         & cr_v.str_read_elem_in.data.prob.zeta
-                         & cr_v.str_read_elem_in.data.prob.epsilon
-                         & cr_v.str_read_elem_in.data.prob.delta
-                         & cr_v.str_read_elem_in.data.prob.beta
-                         & cr_v.str_read_elem_in.data.prob.alpha
-                         & cr_v.str_read_elem_in.data.prob.distm_diff
-                         & cr_v.str_read_elem_in.data.prob.distm_simi;
+          v.prob_data := cr_r.str_read_elem_in.data.prob.eta
+                         & cr_r.str_read_elem_in.data.prob.zeta
+                         & cr_r.str_read_elem_in.data.prob.epsilon
+                         & cr_r.str_read_elem_in.data.prob.delta
+                         & cr_r.str_read_elem_in.data.prob.beta
+                         & cr_r.str_read_elem_in.data.prob.alpha
+                         & cr_r.str_read_elem_in.data.prob.distm_diff
+                         & cr_r.str_read_elem_in.data.prob.distm_simi;
         end if;
 
         -- If all (padded) bases of all reads and haplotypes are completely loaded,
         -- and if we have loaded all the (padded) probabilities of the batch into the FIFO's
         -- go to the next state to load the next batch information
-        if v.x_reads = v.inits.x_padded + v.inits.x_len - 1 and v.y_reads = v.inits.y_padded + v.inits.y_len - 1 and v.p_reads = v.inits.x_padded + v.inits.x_len - 1 then
+        if r.x_reads = r.inits.x_padded + r.inits.x_len - 1 and r.y_reads = r.inits.y_padded + r.inits.y_len - 1 and r.p_reads = r.inits.x_padded + r.inits.x_len - 1 then
           v.wed.batches := r.wed.batches - 1;
           v.p_reads     := (others => '0');
           v.state       := LOAD_LOADNEXTINIT;
@@ -1144,13 +1156,13 @@ begin
 
       -- Load next batch information
       when LOAD_LOADNEXTINIT =>
-        v.initial := initial;
+        v.initial := r_initial;
 
-        v.inits.x_size     := u(x_size);
-        v.inits.x_padded   := u(x_padded);
-        v.inits.y_size     := u(y_size);
-        v.inits.y_padded   := u(y_padded);
-        v.inits.x_bppadded := u(x_bppadded);
+        v.inits.x_size     := u(r_x_size);
+        v.inits.x_padded   := u(r_x_padded);
+        v.inits.y_size     := u(r_y_size);
+        v.inits.y_padded   := u(r_y_padded);
+        v.inits.x_bppadded := u(r_x_bppadded);
 
         v.state := LOAD_LAUNCH;
 
