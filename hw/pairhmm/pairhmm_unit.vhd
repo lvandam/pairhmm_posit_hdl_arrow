@@ -196,6 +196,8 @@ architecture pairhmm_unit of pairhmm_unit is
     ctrl     : std_logic_vector(2 * BUS_ADDR_WIDTH - 1 downto 0);
   end record;
 
+  signal hapl_in_data : std_logic_vector(2 * INDEX_WIDTH_HAPL + 2 * BUS_ADDR_WIDTH - 1 downto 0);
+
   type str_hapl_elem_in_t is record
     len  : len_stream_in_t;
     utf8 : utf8_stream_in_t;
@@ -270,6 +272,8 @@ architecture pairhmm_unit of pairhmm_unit is
     lastIdx  : std_logic_vector(INDEX_WIDTH_READ - 1 downto 0);
     ctrl     : std_logic_vector(NUM_STREAMS_READ * BUS_ADDR_WIDTH - 1 downto 0);
   end record;
+
+  signal read_in_data : std_logic_vector(2 * INDEX_WIDTH_READ + NUM_STREAMS_READ * BUS_ADDR_WIDTH - 1 downto 0);
 
   type read_data_stream_in_probs_t is record
     eta        : std_logic_vector(31 downto 0);
@@ -540,6 +544,7 @@ begin
   -----------------------------------------------------------------------------
   -- Command Stream Slice
   -----------------------------------------------------------------------------
+  hapl_in_data <= cr_d.command_hapl.firstIdx & cr_d.command_hapl.lastIdx & cr_d.command_hapl.ctrl;
   slice_inst_hapl : StreamSlice
     generic map (
       DATA_WIDTH => 2 * BUS_ADDR_WIDTH + 2 * INDEX_WIDTH_HAPL
@@ -548,7 +553,7 @@ begin
         reset     => cr_d.reset_units,
         in_valid  => cr_d.command_hapl.valid,
         in_ready  => cmd_hapl_ready,
-        in_data   => cr_d.command_hapl.firstIdx & cr_d.command_hapl.lastIdx & cr_d.command_hapl.ctrl,
+        in_data   => hapl_in_data,
         out_valid => s_cmd_hapl.valid,
         out_ready => s_cmd_hapl.ready,
         out_data  => s_cmd_hapl_tmp
@@ -625,6 +630,7 @@ begin
   -----------------------------------------------------------------------------
   -- Command Stream Slice
   -----------------------------------------------------------------------------
+  read_in_data <= cr_d.command_read.firstIdx & cr_d.command_read.lastIdx & cr_d.command_read.ctrl;
   slice_inst_read : StreamSlice
     generic map (
       DATA_WIDTH => NUM_STREAMS_READ * BUS_ADDR_WIDTH + 2 * INDEX_WIDTH_READ
@@ -633,7 +639,7 @@ begin
         reset     => cr_d.reset_units,
         in_valid  => cr_d.command_read.valid,
         in_ready  => cmd_read_ready,
-        in_data   => cr_d.command_read.firstIdx & cr_d.command_read.lastIdx & cr_d.command_read.ctrl,
+        in_data   => read_in_data,
         out_valid => s_cmd_read.valid,
         out_ready => s_cmd_read.ready,
         out_data  => s_cmd_read_tmp
@@ -1540,32 +1546,82 @@ begin
   re.pairhmm_in.valid <= rs.valid;
   re.pairhmm_in.cell  <= rs.cell;
 
-  -- Set top left input to 1.0 when this is the first cycle of this pair.
-  -- Initial input for first PE
-  re.pairhmm_in.mids.dtl <= r.initial;
 
-  -- Select initial value to travel with systolic array
-  re.pairhmm_in.initial <= r.initial;
 
-  re.pairhmm_in.mids.itl <= (others => '0');
-  re.pairhmm_in.mids.mtl <= (others => '0');
-  re.pairhmm_in.mids.ml  <= (others => '0');
-  re.pairhmm_in.mids.il  <= (others => '0');
-  re.pairhmm_in.mids.dl  <= (others => '0');
-  re.pairhmm_in.mids.mt  <= (others => '0');
-  re.pairhmm_in.mids.it  <= (others => '0');
-  re.pairhmm_in.mids.dt  <= (others => '0');
+-- POSIT EXTRACTION
+gen_posit_extract_raw_es3 : if POSIT_ES = 3 generate
+
+    -- Set top left input to 1.0 when this is the first cycle of this pair.
+    -- Initial input for first PE
+    -- extract_initial_es3 : posit_extract_raw_es3 port map (
+    --   in1  => r.initial,
+    --   absolute => open,
+    --   result => re.pairhmm_in.mids.dtl
+    --   );
+      -- Select initial value to travel with systolic array
+      re.pairhmm_in.initial <= value_empty;-- re.pairhmm_in.mids.dtl;
+
+    re.pairhmm_in.mids.itl <= value_empty;
+    re.pairhmm_in.mids.mtl <= value_empty;
+    re.pairhmm_in.mids.ml  <= value_empty;
+    re.pairhmm_in.mids.il  <= value_empty;
+    re.pairhmm_in.mids.dl  <= value_empty;
+    re.pairhmm_in.mids.mt  <= value_empty;
+    re.pairhmm_in.mids.it  <= value_empty;
+    re.pairhmm_in.mids.dt  <= value_empty;
+
+--   extract_distm_simi_es3 : posit_extract_raw_es3 port map (
+--     in1  => probdelay(int(PE_DEPTH - 1 - rs.schedule))(31 downto 0),
+--     absolute => open,
+--     result => re.pairhmm_in.emis.distm_simi
+--     );
+--   extract_distm_diff_es3 : posit_extract_raw_es3 port map (
+--     in1  => probdelay(int(PE_DEPTH - 1 - rs.schedule))(63 downto 32),
+--     absolute => open,
+--     result => re.pairhmm_in.emis.distm_diff
+--     );
+--   extract_alpha_es3 : posit_extract_raw_es3 port map (
+--     in1  => probdelay(int(PE_DEPTH - 1 - rs.schedule))(95 downto 64),
+--     absolute => open,
+--     result => re.pairhmm_in.tmis.alpha
+--     );
+--   extract_beta_es3 : posit_extract_raw_es3 port map (
+--     in1  => probdelay(int(PE_DEPTH - 1 - rs.schedule))(127 downto 96),
+--     absolute => open,
+--     result => re.pairhmm_in.tmis.beta
+--     );
+--   extract_delta_es3 : posit_extract_raw_es3 port map (
+--     in1  => probdelay(int(PE_DEPTH - 1 - rs.schedule))(159 downto 128),
+--     absolute => open,
+--     result => re.pairhmm_in.tmis.delta
+--     );
+--   extract_epsilon_es3 : posit_extract_raw_es3 port map (
+--     in1  => probdelay(int(PE_DEPTH - 1 - rs.schedule))(191 downto 160),
+--     absolute => open,
+--     result => re.pairhmm_in.tmis.epsilon
+--     );
+--   extract_zeta_es3 : posit_extract_raw_es3 port map (
+--     in1  => probdelay(int(PE_DEPTH - 1 - rs.schedule))(223 downto 192),
+--     absolute => open,
+--     result => re.pairhmm_in.tmis.zeta
+--     );
+--   extract_eta_es3 : posit_extract_raw_es3 port map (
+--     in1  => probdelay(int(PE_DEPTH - 1 - rs.schedule))(255 downto 224),
+--     absolute => open,
+--     result => re.pairhmm_in.tmis.eta
+--     );
+end generate;
 
   process(probdelay, rs.schedule)
   begin
-    re.pairhmm_in.emis.distm_simi <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(31 downto 0);
-    re.pairhmm_in.emis.distm_diff <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(63 downto 32);
-    re.pairhmm_in.tmis.alpha      <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(95 downto 64);
-    re.pairhmm_in.tmis.beta       <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(127 downto 96);
-    re.pairhmm_in.tmis.delta      <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(159 downto 128);
-    re.pairhmm_in.tmis.epsilon    <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(191 downto 160);
-    re.pairhmm_in.tmis.zeta       <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(223 downto 192);
-    re.pairhmm_in.tmis.eta        <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(255 downto 224);
+    re.pairhmm_in.emis.distm_simi <= value_empty;--probdelay(int(PE_DEPTH - 1 - rs.schedule))(31 downto 0);
+    re.pairhmm_in.emis.distm_diff <= value_empty;--probdelay(int(PE_DEPTH - 1 - rs.schedule))(63 downto 32);
+    re.pairhmm_in.tmis.alpha      <= value_empty;--probdelay(int(PE_DEPTH - 1 - rs.schedule))(95 downto 64);
+    re.pairhmm_in.tmis.beta       <= value_empty;--probdelay(int(PE_DEPTH - 1 - rs.schedule))(127 downto 96);
+    re.pairhmm_in.tmis.delta      <= value_empty;--probdelay(int(PE_DEPTH - 1 - rs.schedule))(159 downto 128);
+    re.pairhmm_in.tmis.epsilon    <= value_empty;--probdelay(int(PE_DEPTH - 1 - rs.schedule))(191 downto 160);
+    re.pairhmm_in.tmis.zeta       <= value_empty;--probdelay(int(PE_DEPTH - 1 - rs.schedule))(223 downto 192);
+    re.pairhmm_in.tmis.eta        <= value_empty;--probdelay(int(PE_DEPTH - 1 - rs.schedule))(255 downto 224);
   end process;
 
   ---------------------------------------------------------------------------------------------------
@@ -1607,65 +1663,67 @@ begin
   -- |_|    \___|  \___|  \__,_| |_.__/   \__,_|  \___| |_|\_\
   ---------------------------------------------------------------------------------------------------
   -- Output data that is written back to the memory, goes into the fifo first
-  re.fbfifo.din(31 downto 0)    <= re.pairhmm.o.last.mids.ml;
-  re.fbfifo.din(95 downto 64)   <= re.pairhmm.o.last.mids.dl;
-  re.fbfifo.din(127 downto 96)  <= re.pairhmm.o.last.emis.distm_simi;
-  re.fbfifo.din(159 downto 128) <= re.pairhmm.o.last.emis.distm_diff;
-  re.fbfifo.din(191 downto 160) <= re.pairhmm.o.last.tmis.alpha;
-  re.fbfifo.din(223 downto 192) <= re.pairhmm.o.last.tmis.beta;
-  re.fbfifo.din(255 downto 224) <= re.pairhmm.o.last.tmis.delta;
-  re.fbfifo.din(287 downto 256) <= re.pairhmm.o.last.tmis.epsilon;
-  re.fbfifo.din(319 downto 288) <= re.pairhmm.o.last.tmis.zeta;
-  re.fbfifo.din(351 downto 320) <= re.pairhmm.o.last.tmis.eta;
-  re.fbfifo.din(354 downto 352) <= bpslv3(re.pairhmm.o.last.x);
-  re.fbfifo.din(386 downto 355) <= re.pairhmm.o.last.initial;
+  gen_fb_in_es3 : if POSIT_ES = 3 generate
+    re.fbfifo.din(37 downto 0)    <= re.pairhmm.o.last.mids.ml;
+    re.fbfifo.din(113 downto 76)  <= re.pairhmm.o.last.mids.dl;
+    re.fbfifo.din(151 downto 114) <= re.pairhmm.o.last.emis.distm_simi;
+    re.fbfifo.din(189 downto 152) <= re.pairhmm.o.last.emis.distm_diff;
+    re.fbfifo.din(227 downto 190) <= re.pairhmm.o.last.tmis.alpha;
+    re.fbfifo.din(265 downto 228) <= re.pairhmm.o.last.tmis.beta;
+    re.fbfifo.din(303 downto 266) <= re.pairhmm.o.last.tmis.delta;
+    re.fbfifo.din(341 downto 304) <= re.pairhmm.o.last.tmis.epsilon;
+    re.fbfifo.din(379 downto 342) <= re.pairhmm.o.last.tmis.zeta;
+    re.fbfifo.din(417 downto 380) <= re.pairhmm.o.last.tmis.eta;
+    re.fbfifo.din(420 downto 418) <= bpslv3(re.pairhmm.o.last.x);
+    re.fbfifo.din(458 downto 421) <= re.pairhmm.o.last.initial;
 
-  -- latency of 1 to match delay of read and hapl rams
-  re.fbfifo.c.rd_en <= rs.feedback_rd_en;
-  re.fbfifo.c.wr_en <= rs.feedback_wr_en and re.pairhmm.o.last.valid;
+    -- latency of 1 to match delay of read and hapl rams
+    re.fbfifo.c.rd_en <= rs.feedback_rd_en;
+    re.fbfifo.c.wr_en <= rs.feedback_wr_en and re.pairhmm.o.last.valid;
 
-  fbfifo : feedback_fifo port map (
-    din       => re.fbfifo.din,
-    dout      => re.fbfifo.dout,
-    clk       => re.clk_kernel,
-    srst      => re.fbfifo.c.rst,
-    wr_en     => re.fbfifo.c.wr_en,
-    rd_en     => re.fbfifo.c.rd_en,
-    wr_ack    => re.fbfifo.c.wr_ack,
-    valid     => re.fbfifo.c.valid,
-    full      => re.fbfifo.c.full,
-    empty     => re.fbfifo.c.empty,
-    overflow  => re.fbfifo.c.overflow,
-    underflow => re.fbfifo.c.underflow
-    );
+    fbfifo : feedback_fifo_es3 port map (
+      din       => re.fbfifo.din,
+      dout      => re.fbfifo.dout,
+      clk       => re.clk_kernel,
+      srst      => re.fbfifo.c.rst,
+      wr_en     => re.fbfifo.c.wr_en,
+      rd_en     => re.fbfifo.c.rd_en,
+      wr_ack    => re.fbfifo.c.wr_ack,
+      valid     => re.fbfifo.c.valid,
+      full      => re.fbfifo.c.full,
+      empty     => re.fbfifo.c.empty,
+      overflow  => re.fbfifo.c.overflow,
+      underflow => re.fbfifo.c.underflow
+      );
 
-  re.fbfifo.c.rst <= rs.feedback_rst;
+    re.fbfifo.c.rst <= rs.feedback_rst;
 
-  -- Set top left input to 1.0 when this is the first cycle of this pair.
-  gen_es2_es3_topleft1 : if POSIT_ES = 2 or POSIT_ES = 3 generate
-    with rs.cycle select re.fbpairhmm.mids.mtl <= X"40000000" when CYCLE_ZERO,
-                                                  X"00000000" when others;
+    -- Set top left input to 1.0 when this is the first cycle of this pair.
+    -- with rs.cycle select
+    re.fbpairhmm.mids.mtl <= value_one when rs.cycle = CYCLE_ZERO else value_empty;  --X"40000000" when CYCLE_ZERO,
+                                                --  value_empty when others;  --X"00000000" when others;
+
+
+    re.fbpairhmm.mids.itl <= value_es3_empty;
+    re.fbpairhmm.mids.dtl <= value_es3_empty;
+    re.fbpairhmm.mids.mt  <= value_es3_empty;
+    re.fbpairhmm.mids.it  <= value_es3_empty;
+    re.fbpairhmm.mids.dt  <= value_es3_empty;
+
+    re.fbpairhmm.mids.ml         <= re.fbfifo.dout(37 downto 0);
+    re.fbpairhmm.mids.il         <= re.fbfifo.dout(75 downto 38);
+    re.fbpairhmm.mids.dl         <= re.fbfifo.dout(113 downto 76);
+    re.fbpairhmm.emis.distm_simi <= re.fbfifo.dout(151 downto 114);
+    re.fbpairhmm.emis.distm_diff <= re.fbfifo.dout(189 downto 152);
+    re.fbpairhmm.tmis.alpha      <= re.fbfifo.dout(227 downto 190);
+    re.fbpairhmm.tmis.beta       <= re.fbfifo.dout(265 downto 228);
+    re.fbpairhmm.tmis.delta      <= re.fbfifo.dout(303 downto 266);
+    re.fbpairhmm.tmis.epsilon    <= re.fbfifo.dout(341 downto 304);
+    re.fbpairhmm.tmis.zeta       <= re.fbfifo.dout(379 downto 342);
+    re.fbpairhmm.tmis.eta        <= re.fbfifo.dout(417 downto 380);
+    re.fbpairhmm.x               <= slv3bp(re.fbfifo.dout(420 downto 418));
+    re.fbpairhmm.initial         <= re.fbfifo.dout(458 downto 421);
   end generate;
-
-  re.fbpairhmm.mids.itl <= (others => '0');
-  re.fbpairhmm.mids.dtl <= (others => '0');
-  re.fbpairhmm.mids.mt  <= (others => '0');
-  re.fbpairhmm.mids.it  <= (others => '0');
-  re.fbpairhmm.mids.dt  <= (others => '0');
-
-  re.fbpairhmm.mids.ml         <= re.fbfifo.dout(31 downto 0);
-  re.fbpairhmm.mids.il         <= re.fbfifo.dout(63 downto 32);
-  re.fbpairhmm.mids.dl         <= re.fbfifo.dout(95 downto 64);
-  re.fbpairhmm.emis.distm_simi <= re.fbfifo.dout(127 downto 96);
-  re.fbpairhmm.emis.distm_diff <= re.fbfifo.dout(159 downto 128);
-  re.fbpairhmm.tmis.alpha      <= re.fbfifo.dout(191 downto 160);
-  re.fbpairhmm.tmis.beta       <= re.fbfifo.dout(223 downto 192);
-  re.fbpairhmm.tmis.delta      <= re.fbfifo.dout(255 downto 224);
-  re.fbpairhmm.tmis.epsilon    <= re.fbfifo.dout(287 downto 256);
-  re.fbpairhmm.tmis.zeta       <= re.fbfifo.dout(319 downto 288);
-  re.fbpairhmm.tmis.eta        <= re.fbfifo.dout(351 downto 320);
-  re.fbpairhmm.x               <= slv3bp(re.fbfifo.dout(354 downto 352));
-  re.fbpairhmm.initial         <= re.fbfifo.dout(386 downto 355);
 
   re.fbpairhmm.en    <= '1';
   re.fbpairhmm.valid <= rs.valid;

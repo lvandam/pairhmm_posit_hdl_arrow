@@ -146,6 +146,7 @@ architecture rtl of axi_write_converter is
 
   signal reset                  : std_logic;
 begin
+
   -- If the ratio is 1, simply pass through, but convert to AXI len
   pass_through_gen: if RATIO = 1 generate
     s_bus_wreq_ready            <= m_axi_awready;
@@ -192,10 +193,10 @@ begin
     -- From slave port to StreamSerializer
     ser_dat_i_data                <= s_bus_wdat_data;
     ser_dat_i_last                <= s_bus_wdat_last;
-    
+
     ser_stb_i_data                <= s_bus_wdat_strobe;
     ser_stb_i_last                <= s_bus_wdat_last;
-    
+
     -- Split the write data stream into data and strobe for serialization
     wdat_split: StreamSync
       generic map (
@@ -212,7 +213,7 @@ begin
         out_ready(0)            => ser_dat_i_ready,
         out_ready(1)            => ser_stb_i_ready
       );
-    
+
     -- Serialize the data
     data_serializer: StreamSerializer
       generic map (
@@ -237,7 +238,7 @@ begin
         out_data                => ser_dat_o_data,
         out_last                => ser_dat_o_last
       );
-      
+
     -- Serialize the strobe
     strobe_serializer: StreamSerializer
       generic map (
@@ -262,7 +263,7 @@ begin
         out_data                => ser_stb_o_data,
         out_last                => ser_stb_o_last
       );
-      
+
     -- Join the strobe and data streams
     wdat_join: StreamSync
       generic map (
@@ -279,13 +280,13 @@ begin
         out_valid(0)            => buf_mst_wdat_valid,
         out_ready(0)            => buf_mst_wdat_ready
       );
-      
-        
+
+
     -- From StreamSerializer to BusBuffer
     buf_mst_wdat_data           <= ser_dat_o_data;
     buf_mst_wdat_strobe         <= ser_stb_o_data;
     buf_mst_wdat_last           <= ser_dat_o_last and ser_stb_o_last;
-        
+
     ---------------------------------------------------------------------------
     fifo_gen: if ENABLE_FIFO = true generate
       -- Instantiate a FIFO
@@ -296,8 +297,8 @@ begin
           BUS_DATA_WIDTH        => MASTER_DATA_WIDTH,
           BUS_STROBE_WIDTH      => MASTER_DATA_WIDTH/8,
           FIFO_DEPTH            => MASTER_MAX_BURST+1
-        )                           
-        port map (                  
+        )
+        port map (
           clk                   => clk,
           reset                 => reset,
           mst_wreq_valid        => buf_mst_wreq_valid,
@@ -320,7 +321,7 @@ begin
           slv_wdat_last         => buf_slv_wdat_last
         );
     end generate;
-    
+
     no_fifo_gen: if ENABLE_FIFO = false generate
       -- No FIFO, just pass through the channels
       buf_slv_wreq_valid        <= buf_mst_wreq_valid;
@@ -334,15 +335,14 @@ begin
       buf_mst_wdat_strobe       <= buf_slv_wdat_strobe;
       buf_mst_wdat_last         <= buf_slv_wdat_last;
     end generate;
-    
+
       -- Write data channel BusWriteBuffer to AXI Master Port
     m_axi_wvalid                <= buf_slv_wdat_valid;
     buf_slv_wdat_ready          <= m_axi_wready;
     m_axi_wdata                 <= buf_slv_wdat_data;
     m_axi_wstrb                 <= buf_slv_wdat_strobe;
     m_axi_wlast                 <= buf_slv_wdat_last;
-    
-  end generate;
-  
-end architecture rtl;
 
+  end generate;
+
+end architecture rtl;

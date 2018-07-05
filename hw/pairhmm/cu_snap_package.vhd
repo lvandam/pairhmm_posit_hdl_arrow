@@ -43,9 +43,15 @@ package cu_snap_package is
     c    : fifo_controls;
   end record;
 
+  -- type fbfifo_item is record
+  --   din  : std_logic_vector(386 downto 0);
+  --   dout : std_logic_vector(386 downto 0);
+  --   c    : fifo_controls;
+  -- end record;
+
   type fbfifo_item is record
-    din  : std_logic_vector(386 downto 0);
-    dout : std_logic_vector(386 downto 0);
+    din  : std_logic_vector(458 downto 0);
+    dout : std_logic_vector(458 downto 0);
     c    : fifo_controls;
   end record;
 
@@ -87,7 +93,8 @@ package cu_snap_package is
     wed   : wed_type;
 
     inits   : cu_inits;
-    initial : prob;
+    -- initial : prob;
+    initial : std_logic_vector(31 downto 0);
     sched   : cu_inits;
 
     y_reads : unsigned(15 downto 0);

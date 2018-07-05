@@ -371,6 +371,23 @@ package arrow_pairhmm_pkg is
       );
   end component;
 
+  component feedback_fifo_es3
+    port (
+      clk       : in  std_logic;
+      srst      : in  std_logic;
+      din       : in  std_logic_vector(458 downto 0);
+      wr_en     : in  std_logic;
+      rd_en     : in  std_logic;
+      dout      : out std_logic_vector(458 downto 0);
+      full      : out std_logic;
+      wr_ack    : out std_logic;
+      overflow  : out std_logic;
+      empty     : out std_logic;
+      valid     : out std_logic;
+      underflow : out std_logic
+      );
+  end component;
+
   component output_fifo
     port (
       wr_clk    : in  std_logic;
