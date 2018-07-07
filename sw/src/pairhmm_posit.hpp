@@ -111,6 +111,17 @@ public:
             distm_diff.set_raw_bits(prob[(i - 1) + pair].p[6].b);
             distm_simi.set_raw_bits(prob[(i - 1) + pair].p[7].b);
 
+            // if(i == 1 && pair == 0) {
+            //     cout << "eta: " << hexstring(eta.collect()) << endl;
+            //     cout << "zeta: " << hexstring(zeta.collect()) << endl;
+            //     cout << "epsilon: " << hexstring(epsilon.collect()) << endl;
+            //     cout << "delta: " << hexstring(delta.collect()) << endl;
+            //     cout << "beta: " << hexstring(beta.collect()) << endl;
+            //     cout << "alpha: " << hexstring(alpha.collect()) << endl;
+            //     cout << "distm_diff: " << hexstring(distm_diff.collect()) << endl;
+            //     cout << "distm_simi: " << hexstring(distm_simi.collect()) << endl;
+            // }
+
             for (int j = 1; j < y + 1; j++) {
                 unsigned char hb = hapl[j - 1 + pair].base;
 
@@ -123,6 +134,20 @@ public:
                 M[i][j] = distm * (alpha * M[i - 1][j - 1] + beta * I[i - 1][j - 1] + beta * D[i - 1][j - 1]);
                 I[i][j] = delta * M[i - 1][j] + epsilon * I[i - 1][j];
                 D[i][j] = zeta * M[i][j - 1] + eta * D[i][j - 1];
+
+                // if(i == 1 && j == 1 && pair == 0) {
+                //     cout << "almtl: " << hexstring((alpha * M[i - 1][j - 1]).collect()) << endl;
+                //     cout << "beitl: " << hexstring((beta * I[i - 1][j - 1]).collect()) << endl;
+                //     cout << "gadtl: " << hexstring((beta * D[i - 1][j - 1]).collect()) << endl;
+                //     cout << "demt: " << hexstring((delta * M[i - 1][j]).collect()) << endl;
+                //     cout << "epit: " << hexstring((epsilon * I[i - 1][j]).collect()) << endl;
+                //     cout << "etdl: " << hexstring((eta * D[i][j - 1]).collect()) << endl;
+                //
+                //     cout << "albetl: " << hexstring((alpha * M[i - 1][j - 1] + beta * I[i - 1][j - 1]).collect()) << endl;
+                //     cout << "albegatl: " << hexstring((alpha * M[i - 1][j - 1] + beta * I[i - 1][j - 1] + beta * D[i - 1][j - 1]).collect()) << endl;
+                //     cout << "deept: " << hexstring((delta * M[i - 1][j] + epsilon * I[i - 1][j]).collect()) << endl;
+                //     cout << "zeett: " << hexstring((zeta * M[i][j - 1] + eta * D[i][j - 1]).collect()) << endl;
+                // }
             }
         }
     } // calculate_mids

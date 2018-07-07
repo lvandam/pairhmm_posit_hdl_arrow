@@ -1548,27 +1548,30 @@ begin
   re.pairhmm_in.valid <= rs.valid;
   re.pairhmm_in.cell  <= rs.cell;
 
-in_posit.distm_simi <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(31 downto 0);
-in_posit.distm_diff <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(63 downto 32);
-in_posit.alpha <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(95 downto 64);
-in_posit.beta <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(127 downto 96);
-in_posit.delta <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(159 downto 128);
-in_posit.epsilon <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(191 downto 160);
-in_posit.zeta <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(223 downto 192);
-in_posit.eta <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(255 downto 224);
+  process(probdelay, rs.schedule)
+  begin
+    in_posit.distm_simi <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(31 downto 0);
+    in_posit.distm_diff <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(63 downto 32);
+    in_posit.alpha      <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(95 downto 64);
+    in_posit.beta       <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(127 downto 96);
+    in_posit.delta      <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(159 downto 128);
+    in_posit.epsilon    <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(191 downto 160);
+    in_posit.zeta       <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(223 downto 192);
+    in_posit.eta        <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(255 downto 224);
+  end process;
 
 -- POSIT EXTRACTION
-gen_posit_extract_raw_es3 : if POSIT_ES = 3 generate
+  gen_posit_extract_raw_es3 : if POSIT_ES = 3 generate
 
     -- Set top left input to 1.0 when this is the first cycle of this pair.
     -- Initial input for first PE
     extract_initial_es3 : posit_extract_raw_es3 port map (
-      in1  => r.initial,
+      in1      => r.initial,
       absolute => open,
-      result => re.pairhmm_in.mids.dtl
+      result   => re.pairhmm_in.mids.dtl
       );
-      -- Select initial value to travel with systolic array
-      re.pairhmm_in.initial <= re.pairhmm_in.mids.dtl;
+    -- Select initial value to travel with systolic array
+    re.pairhmm_in.initial <= re.pairhmm_in.mids.dtl;
 
     re.pairhmm_in.mids.itl <= value_empty;
     re.pairhmm_in.mids.mtl <= value_empty;
@@ -1579,59 +1582,47 @@ gen_posit_extract_raw_es3 : if POSIT_ES = 3 generate
     re.pairhmm_in.mids.it  <= value_empty;
     re.pairhmm_in.mids.dt  <= value_empty;
 
-  extract_distm_simi_es3 : posit_extract_raw_es3 port map (
-    in1  => in_posit.distm_simi,
-    absolute => open,
-    result => re.pairhmm_in.emis.distm_simi
-    );
-  extract_distm_diff_es3 : posit_extract_raw_es3 port map (
-    in1  => in_posit.distm_diff,
-    absolute => open,
-    result => re.pairhmm_in.emis.distm_diff
-    );
-  extract_alpha_es3 : posit_extract_raw_es3 port map (
-    in1  => in_posit.alpha,
-    absolute => open,
-    result => re.pairhmm_in.tmis.alpha
-    );
-  extract_beta_es3 : posit_extract_raw_es3 port map (
-    in1  => in_posit.beta,
-    absolute => open,
-    result => re.pairhmm_in.tmis.beta
-    );
-  extract_delta_es3 : posit_extract_raw_es3 port map (
-    in1  =>in_posit.delta,
-    absolute => open,
-    result => re.pairhmm_in.tmis.delta
-    );
-  extract_epsilon_es3 : posit_extract_raw_es3 port map (
-    in1  => in_posit.epsilon,
-    absolute => open,
-    result => re.pairhmm_in.tmis.epsilon
-    );
-  extract_zeta_es3 : posit_extract_raw_es3 port map (
-    in1  => in_posit.zeta,
-    absolute => open,
-    result => re.pairhmm_in.tmis.zeta
-    );
-  extract_eta_es3 : posit_extract_raw_es3 port map (
-    in1  => in_posit.eta,
-    absolute => open,
-    result => re.pairhmm_in.tmis.eta
-    );
-end generate;
-
-  -- process(probdelay, rs.schedule)
-  -- begin
-  --   re.pairhmm_in.emis.distm_simi <= value_empty;--probdelay(int(PE_DEPTH - 1 - rs.schedule))(31 downto 0);
-  --   re.pairhmm_in.emis.distm_diff <= value_empty;--probdelay(int(PE_DEPTH - 1 - rs.schedule))(63 downto 32);
-  --   re.pairhmm_in.tmis.alpha      <= value_empty;--probdelay(int(PE_DEPTH - 1 - rs.schedule))(95 downto 64);
-  --   re.pairhmm_in.tmis.beta       <= value_empty;--probdelay(int(PE_DEPTH - 1 - rs.schedule))(127 downto 96);
-  --   re.pairhmm_in.tmis.delta      <= value_empty;--probdelay(int(PE_DEPTH - 1 - rs.schedule))(159 downto 128);
-  --   re.pairhmm_in.tmis.epsilon    <= value_empty;--probdelay(int(PE_DEPTH - 1 - rs.schedule))(191 downto 160);
-  --   re.pairhmm_in.tmis.zeta       <= value_empty;--probdelay(int(PE_DEPTH - 1 - rs.schedule))(223 downto 192);
-  --   re.pairhmm_in.tmis.eta        <= value_empty;--probdelay(int(PE_DEPTH - 1 - rs.schedule))(255 downto 224);
-  -- end process;
+    extract_distm_simi_es3 : posit_extract_raw_es3 port map (
+      in1      => in_posit.distm_simi,
+      absolute => open,
+      result   => re.pairhmm_in.emis.distm_simi
+      );
+    extract_distm_diff_es3 : posit_extract_raw_es3 port map (
+      in1      => in_posit.distm_diff,
+      absolute => open,
+      result   => re.pairhmm_in.emis.distm_diff
+      );
+    extract_alpha_es3 : posit_extract_raw_es3 port map (
+      in1      => in_posit.alpha,
+      absolute => open,
+      result   => re.pairhmm_in.tmis.alpha
+      );
+    extract_beta_es3 : posit_extract_raw_es3 port map (
+      in1      => in_posit.beta,
+      absolute => open,
+      result   => re.pairhmm_in.tmis.beta
+      );
+    extract_delta_es3 : posit_extract_raw_es3 port map (
+      in1      => in_posit.delta,
+      absolute => open,
+      result   => re.pairhmm_in.tmis.delta
+      );
+    extract_epsilon_es3 : posit_extract_raw_es3 port map (
+      in1      => in_posit.epsilon,
+      absolute => open,
+      result   => re.pairhmm_in.tmis.epsilon
+      );
+    extract_zeta_es3 : posit_extract_raw_es3 port map (
+      in1      => in_posit.zeta,
+      absolute => open,
+      result   => re.pairhmm_in.tmis.zeta
+      );
+    extract_eta_es3 : posit_extract_raw_es3 port map (
+      in1      => in_posit.eta,
+      absolute => open,
+      result   => re.pairhmm_in.tmis.eta
+      );
+  end generate;
 
   ---------------------------------------------------------------------------------------------------
   --   ____            _                     _
@@ -1716,11 +1707,11 @@ end generate;
     re.fbpairhmm.initial         <= re.fbfifo.dout(458 downto 421);
   end generate;
 
-re.fbfifo.c.rst <= rs.feedback_rst;
+  re.fbfifo.c.rst <= rs.feedback_rst;
 
 -- Set top left input to 1.0 when this is the first cycle of this pair.
 -- with rs.cycle select
-re.fbpairhmm.mids.mtl <= value_one when rs.cycle = CYCLE_ZERO else value_empty;
+  re.fbpairhmm.mids.mtl <= value_one when rs.cycle = CYCLE_ZERO else value_empty;
 
   re.fbpairhmm.mids.itl <= value_empty;
   re.fbpairhmm.mids.dtl <= value_empty;

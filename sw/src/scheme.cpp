@@ -113,7 +113,6 @@ shared_ptr<arrow::Table> create_table_reads_probs(std::vector<t_batch>& batches)
         std::unique_ptr<arrow::FixedSizeBinaryBuilder> builder_;
         builder_.reset(static_cast<arrow::FixedSizeBinaryBuilder*>(tmp.release()));
 
-        // TODO want to create list of lists?
         for(t_batch& batch : batches) {
             std::vector<t_probs>& probs = batch.prob;
 
