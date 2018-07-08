@@ -1,4 +1,5 @@
 #!/bin/bash
+
 cd hw
 
 ES=$1 # Exponent bits
