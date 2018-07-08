@@ -19,6 +19,7 @@ use work.functions.bpslv3;
 use work.functions.all;
 use work.arrow_pairhmm_pkg.all;
 use work.pairhmm_package.all;
+use work.pe_common.all;
 use work.pe_package.all;
 use work.cu_snap_package.all;
 
@@ -1561,6 +1562,68 @@ begin
   end process;
 
 -- POSIT EXTRACTION
+  gen_posit_extract_raw_es2 : if POSIT_ES = 2 generate
+
+    -- Set top left input to 1.0 when this is the first cycle of this pair.
+    -- Initial input for first PE
+    extract_initial_es2 : posit_extract_raw port map (
+      in1      => r.initial,
+      absolute => open,
+      result   => re.pairhmm_in.mids.dtl
+      );
+    -- Select initial value to travel with systolic array
+    re.pairhmm_in.initial <= re.pairhmm_in.mids.dtl;
+
+    re.pairhmm_in.mids.itl <= value_empty;
+    re.pairhmm_in.mids.mtl <= value_empty;
+    re.pairhmm_in.mids.ml  <= value_empty;
+    re.pairhmm_in.mids.il  <= value_empty;
+    re.pairhmm_in.mids.dl  <= value_empty;
+    re.pairhmm_in.mids.mt  <= value_empty;
+    re.pairhmm_in.mids.it  <= value_empty;
+    re.pairhmm_in.mids.dt  <= value_empty;
+
+    extract_distm_simi_es2 : posit_extract_raw port map (
+      in1      => in_posit.distm_simi,
+      absolute => open,
+      result   => re.pairhmm_in.emis.distm_simi
+      );
+    extract_distm_diff_es2 : posit_extract_raw port map (
+      in1      => in_posit.distm_diff,
+      absolute => open,
+      result   => re.pairhmm_in.emis.distm_diff
+      );
+    extract_alpha_es2 : posit_extract_raw port map (
+      in1      => in_posit.alpha,
+      absolute => open,
+      result   => re.pairhmm_in.tmis.alpha
+      );
+    extract_beta_es2 : posit_extract_raw port map (
+      in1      => in_posit.beta,
+      absolute => open,
+      result   => re.pairhmm_in.tmis.beta
+      );
+    extract_delta_es2 : posit_extract_raw port map (
+      in1      => in_posit.delta,
+      absolute => open,
+      result   => re.pairhmm_in.tmis.delta
+      );
+    extract_epsilon_es2 : posit_extract_raw port map (
+      in1      => in_posit.epsilon,
+      absolute => open,
+      result   => re.pairhmm_in.tmis.epsilon
+      );
+    extract_zeta_es2 : posit_extract_raw port map (
+      in1      => in_posit.zeta,
+      absolute => open,
+      result   => re.pairhmm_in.tmis.zeta
+      );
+    extract_eta_es2 : posit_extract_raw port map (
+      in1      => in_posit.eta,
+      absolute => open,
+      result   => re.pairhmm_in.tmis.eta
+      );
+  end generate;
   gen_posit_extract_raw_es3 : if POSIT_ES = 3 generate
 
     -- Set top left input to 1.0 when this is the first cycle of this pair.
@@ -1663,7 +1726,7 @@ begin
   -- |_|    \___|  \___|  \__,_| |_.__/   \__,_|  \___| |_|\_\
   ---------------------------------------------------------------------------------------------------
   -- Output data that is written back to the memory, goes into the fifo first
-  gen_fb_in_es3 : if POSIT_ES = 3 generate
+  gen_fb_in : if POSIT_ES = 2 or POSIT_ES = 3 generate
     re.fbfifo.din(37 downto 0)    <= re.pairhmm.o.last.mids.ml;
     re.fbfifo.din(113 downto 76)  <= re.pairhmm.o.last.mids.dl;
     re.fbfifo.din(151 downto 114) <= re.pairhmm.o.last.emis.distm_simi;
