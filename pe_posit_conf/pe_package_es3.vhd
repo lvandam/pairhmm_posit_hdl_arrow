@@ -235,6 +235,9 @@ package pe_package is
   subtype value_product is std_logic_vector(POSIT_SERIALIZED_WIDTH_PRODUCT_ES3-1 downto 0);
   constant value_product_empty : value_product := (POSIT_SERIALIZED_WIDTH_PRODUCT_ES3-1 downto 1 => '0', others => '1');
 
+  subtype value_accum is std_logic_vector(POSIT_SERIALIZED_WIDTH_ACCUM_ES3-1 downto 0);
+  constant value_accum_empty : value_accum := (POSIT_SERIALIZED_WIDTH_ACCUM_ES3-1 downto 1 => '0', others => '1');
+
   type matchindels_raw is record
     mtl : value;
     itl : value;
@@ -450,6 +453,7 @@ package pe_package is
 
   function prod2val (a : in value_product) return value;
   function sum2val (a  : in value_sum) return value;
+  function accum2val (a : in value_accum) return value;
 
 end package;
 
@@ -491,5 +495,24 @@ package body pe_package is
     assert signed(tmp(36 downto 28)) = signed(a(40 downto 32)) report "Scale loss (sum2val), val=" & integer'image(to_integer(signed(tmp(36 downto 28)))) & ", sum=" & integer'image(to_integer(signed(a(40 downto 32)))) severity error;
     return tmp;
   end function sum2val;
+
+  -- Accum layout:
+  -- 264 1       sign
+  -- 263 9       scale
+  -- 254 252     fraction
+  -- 2   1       inf
+  -- 1   1       zero
+  -- 0
+  function accum2val (a : in value_accum) return value is
+    variable tmp : std_logic_vector(POSIT_SERIALIZED_WIDTH_ES3-1 downto 0);
+  begin
+    tmp(0)            := a(0);
+    tmp(1)            := a(1);
+    tmp(27 downto 2)  := a(253 downto 228);
+    tmp(36 downto 28) := a(262 downto 254);
+    tmp(37)           := a(263);
+    assert signed(tmp(36 downto 28)) = signed(a(262 downto 254)) report "Scale loss (accum2val), val=" & integer'image(to_integer(signed(tmp(36 downto 28)))) & ", sum=" & integer'image(to_integer(signed(a(262 downto 254)))) severity error;
+    return tmp;
+  end function accum2val;
 
 end package body;
