@@ -92,9 +92,9 @@ int main(int argc, char ** argv)
         } else {
                 if (strncmp(argv[1], "-m", 2) == 0) {
                         DEBUG_PRINT("Manual input mode selected. %d arguments supplied.\n", argc);
-                        int pairs = strtoul(argv[2], NULL, 0);
-                        int x = strtoul(argv[3], NULL, 0);
-                        int y = strtoul(argv[4], NULL, 0);
+                        pairs = strtoul(argv[2], NULL, 0);
+                        x = strtoul(argv[3], NULL, 0);
+                        y = strtoul(argv[4], NULL, 0);
                         initial_constant_power = strtoul(argv[5], NULL, 0);
 
                         workload = gen_workload(pairs, x, y);

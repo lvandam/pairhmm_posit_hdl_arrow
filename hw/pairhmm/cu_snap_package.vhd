@@ -205,7 +205,6 @@ package cu_snap_package is
     probfifo : probfifo_item;
 
     fbpairhmm  : pe_in;
-    outdata    : std_logic_vector(1023 downto 0);
     clk_kernel : std_logic;
   end record;
 

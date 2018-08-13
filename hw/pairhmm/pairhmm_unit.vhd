@@ -864,6 +864,7 @@ begin
         cw_r.cs.busy        <= '0';
         cw_r.cs.done        <= '0';
         cw_r.result_index   <= 0;
+        result_count        := 0;
       end if;
     end if;
   end process;
@@ -1561,7 +1562,7 @@ begin
     in_posit.eta        <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(255 downto 224);
   end process;
 
--- POSIT EXTRACTION
+  -- POSIT EXTRACTION
   gen_posit_extract_raw_es2 : if POSIT_ES = 2 generate
 
     -- Set top left input to 1.0 when this is the first cycle of this pair.
@@ -1725,7 +1726,7 @@ begin
   -- | |   |  __/ |  __/ | (_| | | |_) | | (_| | | (__  |   <
   -- |_|    \___|  \___|  \__,_| |_.__/   \__,_|  \___| |_|\_\
   ---------------------------------------------------------------------------------------------------
-  -- Output data that is written back to the memory, goes into the fifo first
+
   gen_fb_in : if POSIT_ES = 2 or POSIT_ES = 3 generate
     re.fbfifo.din(37 downto 0)    <= re.pairhmm.o.last.mids.ml;
     re.fbfifo.din(113 downto 76)  <= re.pairhmm.o.last.mids.dl;
@@ -1772,8 +1773,8 @@ begin
 
   re.fbfifo.c.rst <= rs.feedback_rst;
 
--- Set top left input to 1.0 when this is the first cycle of this pair.
--- with rs.cycle select
+  -- Set top left input to 1.0 when this is the first cycle of this pair.
+  -- with rs.cycle select
   re.fbpairhmm.mids.mtl <= value_one when rs.cycle = CYCLE_ZERO else value_empty;
 
   re.fbpairhmm.mids.itl <= value_empty;

@@ -13,7 +13,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library work;
-use work.pe_common.all;
+use work.posit_common.all;
 use work.functions.all;
 
 package pe_package is
@@ -232,6 +232,9 @@ package pe_package is
   subtype value_sum is std_logic_vector(POSIT_SERIALIZED_WIDTH_SUM_ES3-1 downto 0);
   constant value_sum_empty : value_sum := (POSIT_SERIALIZED_WIDTH_SUM_ES3-1 downto 1 => '0', others => '1');
 
+  subtype value_prod_sum is std_logic_vector(POSIT_SERIALIZED_WIDTH_SUM_PRODUCT_ES3-1 downto 0);
+  constant value_prod_sum_empty : value_prod_sum := (POSIT_SERIALIZED_WIDTH_SUM_PRODUCT_ES3-1 downto 1 => '0', others => '1');
+
   subtype value_product is std_logic_vector(POSIT_SERIALIZED_WIDTH_PRODUCT_ES3-1 downto 0);
   constant value_product_empty : value_product := (POSIT_SERIALIZED_WIDTH_PRODUCT_ES3-1 downto 1 => '0', others => '1');
 
@@ -348,7 +351,7 @@ package pe_package is
     );
 
   type step_add_raw_type is record
-    albetl   : value_sum;
+    albetl: value_prod_sum;
     albegatl : value_sum;
     deept    : value_sum;
     zeett    : value_sum;
@@ -359,7 +362,7 @@ package pe_package is
   end record;
 
   constant step_add_raw_empty : step_add_raw_type := (
-    albetl   => value_sum_empty,
+    albetl   => value_prod_sum_empty,
     albegatl => value_sum_empty,
     deept    => value_sum_empty,
     zeett    => value_sum_empty,
@@ -451,9 +454,10 @@ package pe_package is
   type transmissions_raw_array is array (0 to PE_CYCLES-1) of transmissions_raw;
   type mids_raw_array is array (0 to PE_CYCLES-1) of matchindels_raw;
 
-  function prod2val (a : in value_product) return value;
-  function sum2val (a  : in value_sum) return value;
+  function prod2val (a  : in value_product) return value;
+  function sum2val (a   : in value_sum) return value;
   function accum2val (a : in value_accum) return value;
+  function prodsum2val (a : in value_prod_sum) return value;
 
 end package;
 
@@ -496,6 +500,25 @@ package body pe_package is
     return tmp;
   end function sum2val;
 
+    -- Product Sum layout:
+    -- 71 1       sign
+    -- 70 10       scale
+    -- 60 58     fraction
+    -- 2   1       inf
+    -- 1   1       zero
+    -- 0
+    function prodsum2val (a : in value_prod_sum) return value is
+      variable tmp : std_logic_vector(POSIT_SERIALIZED_WIDTH_ES3-1 downto 0);
+    begin
+      tmp(0)            := a(0);
+      tmp(1)            := a(1);
+      tmp(27 downto 2)  := a(59 downto 34);
+      tmp(36 downto 28) := a(68 downto 60);
+      tmp(37)           := a(70);
+      assert signed(tmp(36 downto 28)) = signed(a(68 downto 60)) report "Scale loss (prodsum2val), val=" & integer'image(to_integer(signed(tmp(36 downto 28)))) & ", sum=" & integer'image(to_integer(signed(a(68 downto 60)))) severity error;
+      return tmp;
+    end function prodsum2val;
+
   -- Accum layout:
   -- 264 1       sign
   -- 263 9       scale
@@ -514,5 +537,13 @@ package body pe_package is
     assert signed(tmp(36 downto 28)) = signed(a(262 downto 254)) report "Scale loss (accum2val), val=" & integer'image(to_integer(signed(tmp(36 downto 28)))) & ", sum=" & integer'image(to_integer(signed(a(262 downto 254)))) severity error;
     return tmp;
   end function accum2val;
+
+  -- Accum Product layout:
+  -- 265 1       sign
+  -- 264 10      scale
+  -- 254 252     fraction
+  -- 2   1       inf
+  -- 1   1       zero
+  -- 0
 
 end package body;

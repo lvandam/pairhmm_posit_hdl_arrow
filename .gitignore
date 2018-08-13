@@ -3,3 +3,5 @@ CMakeCache.txt
 build/
 .idea/
 cmake-build-debug/
+hw/posit_rtl
+hw/pe_package.vhd
