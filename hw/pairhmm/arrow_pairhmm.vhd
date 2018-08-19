@@ -127,7 +127,7 @@ architecture arrow_pairhmm of arrow_pairhmm is
   signal reset : std_logic;
 
   -- Bottom buses
-  constant BB  : natural := 16;  -- Dependent on the number of ports on the BusArbiter
+  constant BB : natural := 16;  -- Dependent on the number of ports on the BusArbiter
 
   -----------------------------------------------------------------------------
   -- Memory Mapped Input/Output
@@ -149,13 +149,14 @@ architecture arrow_pairhmm of arrow_pairhmm is
   --   8 result data address       =  16
   ----------------------------------- Custom registers (arguments)
   --   8 batch offsets                   =  8
+  --   8 batches                         =  8
   --   8 x len           & y len         =  16
   --   8 x size          & y size        =  16
   --   8 x padded size   & y padded size =  16
   --   8 x_bppadded      & initial       =  16
   -----------------------------------
-  -- Total:                          104 regs
-  constant NUM_FLETCHER_REGS : natural := 104;
+  -- Total:                          112 regs
+  constant NUM_FLETCHER_REGS : natural := 112;
 
   -- The LSB index in the slave address
   constant SLV_ADDR_LSB : natural := log2floor(SLV_BUS_DATA_WIDTH / 4) - 1;
@@ -217,17 +218,19 @@ architecture arrow_pairhmm of arrow_pairhmm is
   constant REG_BATCH_OFFSET : natural := 32;
 
   -- Batch information
-  constant REG_X_LEN    : natural := 40;
-  constant REG_Y_LEN    : natural := 48;
+  constant REG_BATCHES : natural := 40;
 
-  constant REG_X_SIZE   : natural := 56;
-  constant REG_Y_SIZE   : natural := 64;
+  constant REG_X_LEN : natural := 48;
+  constant REG_Y_LEN : natural := 56;
 
-  constant REG_XP_SIZE  : natural := 72;
-  constant REG_YP_SIZE  : natural := 80;
+  constant REG_X_SIZE : natural := 64;
+  constant REG_Y_SIZE : natural := 72;
 
-  constant REG_BPP_SIZE : natural := 88;
-  constant REG_INITIAL  : natural := 96;
+  constant REG_XP_SIZE : natural := 80;
+  constant REG_YP_SIZE : natural := 88;
+
+  constant REG_BPP_SIZE : natural := 96;
+  constant REG_INITIAL  : natural := 104;
 
   -- The offsets of the bits to signal busy and done for each of the units
   constant STATUS_BUSY_OFFSET : natural := 0;
@@ -282,6 +285,7 @@ architecture arrow_pairhmm of arrow_pairhmm is
   signal reg_array_batch_offset : reg_array_t;
 
   -- Batch information
+  signal reg_array_batches                    : reg_array_t;
   signal reg_array_x_len, reg_array_y_len     : reg_array_t;
   signal reg_array_x_size, reg_array_y_size   : reg_array_t;
   signal reg_array_xp_size, reg_array_yp_size : reg_array_t;
@@ -446,6 +450,7 @@ begin
         reg_array_result_data_lo (I) <= mm_regs(REG_RESULT_DATA_ADDR_LO + (I * 2));
 
         -- Batch information
+        reg_array_batches (I)  <= mm_regs(REG_BATCHES + I);
         reg_array_x_len (I)    <= mm_regs(REG_X_LEN + I);
         reg_array_y_len (I)    <= mm_regs(REG_Y_LEN + I);
         reg_array_x_size (I)   <= mm_regs(REG_X_SIZE + I);
@@ -466,7 +471,7 @@ begin
   m_axi_arvalid   <= axi_top.arvalid;
   m_axi_araddr    <= axi_top.araddr;
   m_axi_arlen     <= axi_top.arlen;
-  m_axi_arsize    <= "110"; -- 6 for 2^6*8 bits = 512 bits
+  m_axi_arsize    <= "110";             -- 6 for 2^6*8 bits = 512 bits
 
   -- Read data channel
   m_axi_rready   <= axi_top.rready;
@@ -642,6 +647,7 @@ begin
         batch_offset => reg_array_batch_offset (I),
 
         -- Batch information
+        batches    => reg_array_batches (I),
         x_len      => reg_array_x_len (I),
         y_len      => reg_array_y_len (I),
         x_size     => reg_array_x_size (I),
@@ -964,23 +970,23 @@ begin
       bm1_resp_data  => axi_mid_array(1).rdata,
       bm1_resp_last  => axi_mid_array(1).rlast,
 
-        bm2_req_valid  => open,
-        bm2_req_ready  => open,
-        bm2_req_addr   => open,
-        bm2_req_len    => open,
-        bm2_resp_valid => open,
-        bm2_resp_ready => open,
-        bm2_resp_data  => open,
-        bm2_resp_last  => open,
+      bm2_req_valid  => open,
+      bm2_req_ready  => open,
+      bm2_req_addr   => open,
+      bm2_req_len    => open,
+      bm2_resp_valid => open,
+      bm2_resp_ready => open,
+      bm2_resp_data  => open,
+      bm2_resp_last  => open,
 
-        bm3_req_valid  => open,
-        bm3_req_ready  => open,
-        bm3_req_addr   => open,
-        bm3_req_len    => open,
-        bm3_resp_valid => open,
-        bm3_resp_ready => open,
-        bm3_resp_data  => open,
-        bm3_resp_last  => open,
+      bm3_req_valid  => open,
+      bm3_req_ready  => open,
+      bm3_req_addr   => open,
+      bm3_req_len    => open,
+      bm3_resp_valid => open,
+      bm3_resp_ready => open,
+      bm3_resp_data  => open,
+      bm3_resp_last  => open,
 
       -- bm2_req_valid  => axi_mid_array(3).arvalid,
       -- bm2_req_ready  => axi_mid_array(3).arready,

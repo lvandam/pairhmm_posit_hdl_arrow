@@ -91,6 +91,19 @@ package pe_package is
     eta        : std_logic_vector(31 downto 0);
   end record;
 
+  constant probabilities_empty : probabilities := (
+    distm_simi => (others => '0'),
+    distm_diff => (others => '0'),
+    theta      => (others => '0'),
+    upsilon    => (others => '0'),
+    alpha      => (others => '0'),
+    beta       => (others => '0'),
+    delta      => (others => '0'),
+    epsilon    => (others => '0'),
+    zeta       => (others => '0'),
+    eta        => (others => '0')
+    );
+
   type step_init_type is record
     initial : prob;
     tmis    : transmissions;
@@ -351,7 +364,7 @@ package pe_package is
     );
 
   type step_add_raw_type is record
-    albetl: value_prod_sum;
+    albetl   : value_prod_sum;
     albegatl : value_sum;
     deept    : value_sum;
     zeett    : value_sum;
@@ -454,9 +467,9 @@ package pe_package is
   type transmissions_raw_array is array (0 to PE_CYCLES-1) of transmissions_raw;
   type mids_raw_array is array (0 to PE_CYCLES-1) of matchindels_raw;
 
-  function prod2val (a  : in value_product) return value;
-  function sum2val (a   : in value_sum) return value;
-  function accum2val (a : in value_accum) return value;
+  function prod2val (a    : in value_product) return value;
+  function sum2val (a     : in value_sum) return value;
+  function accum2val (a   : in value_accum) return value;
   function prodsum2val (a : in value_prod_sum) return value;
 
 end package;
@@ -500,24 +513,24 @@ package body pe_package is
     return tmp;
   end function sum2val;
 
-    -- Product Sum layout:
-    -- 71 1       sign
-    -- 70 10       scale
-    -- 60 58     fraction
-    -- 2   1       inf
-    -- 1   1       zero
-    -- 0
-    function prodsum2val (a : in value_prod_sum) return value is
-      variable tmp : std_logic_vector(POSIT_SERIALIZED_WIDTH_ES3-1 downto 0);
-    begin
-      tmp(0)            := a(0);
-      tmp(1)            := a(1);
-      tmp(27 downto 2)  := a(59 downto 34);
-      tmp(36 downto 28) := a(68 downto 60);
-      tmp(37)           := a(70);
-      assert signed(tmp(36 downto 28)) = signed(a(68 downto 60)) report "Scale loss (prodsum2val), val=" & integer'image(to_integer(signed(tmp(36 downto 28)))) & ", sum=" & integer'image(to_integer(signed(a(68 downto 60)))) severity error;
-      return tmp;
-    end function prodsum2val;
+  -- Product Sum layout:
+  -- 71 1       sign
+  -- 70 10       scale
+  -- 60 58     fraction
+  -- 2   1       inf
+  -- 1   1       zero
+  -- 0
+  function prodsum2val (a : in value_prod_sum) return value is
+    variable tmp : std_logic_vector(POSIT_SERIALIZED_WIDTH_ES3-1 downto 0);
+  begin
+    tmp(0)            := a(0);
+    tmp(1)            := a(1);
+    tmp(27 downto 2)  := a(59 downto 34);
+    tmp(36 downto 28) := a(68 downto 60);
+    tmp(37)           := a(70);
+    assert signed(tmp(36 downto 28)) = signed(a(68 downto 60)) report "Scale loss (prodsum2val), val=" & integer'image(to_integer(signed(tmp(36 downto 28)))) & ", sum=" & integer'image(to_integer(signed(a(68 downto 60)))) severity error;
+    return tmp;
+  end function prodsum2val;
 
   -- Accum layout:
   -- 264 1       sign

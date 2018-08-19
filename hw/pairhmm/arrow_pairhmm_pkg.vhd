@@ -286,6 +286,7 @@ package arrow_pairhmm_pkg is
       batch_offset : in std_logic_vector(REG_WIDTH-1 downto 0);
 
       -- Batch information
+      batches    : in std_logic_vector(REG_WIDTH-1 downto 0);
       x_len      : in std_logic_vector(REG_WIDTH-1 downto 0);
       y_len      : in std_logic_vector(REG_WIDTH-1 downto 0);
       x_size     : in std_logic_vector(REG_WIDTH-1 downto 0);

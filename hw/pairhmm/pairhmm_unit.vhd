@@ -65,6 +65,7 @@ entity pairhmm_unit is
     batch_offset : in std_logic_vector(REG_WIDTH-1 downto 0);
 
     -- Batch information
+    batches    : in std_logic_vector(REG_WIDTH-1 downto 0);
     x_len      : in std_logic_vector(REG_WIDTH-1 downto 0);
     y_len      : in std_logic_vector(REG_WIDTH-1 downto 0);
     x_size     : in std_logic_vector(REG_WIDTH-1 downto 0);
@@ -143,7 +144,7 @@ architecture pairhmm_unit of pairhmm_unit is
   signal r_batch_offset : std_logic_vector(REG_WIDTH - 1 downto 0);  -- To retrieve the correct data from Arrow columns
 
   -- Batch information
-  signal r_x_len, r_y_len, r_x_size, r_x_padded, r_y_size, r_y_padded, r_x_bppadded, r_initial : std_logic_vector(REG_WIDTH - 1 downto 0);
+  signal r_batches, r_x_len, r_y_len, r_x_size, r_x_padded, r_y_size, r_y_padded, r_x_bppadded, r_initial : std_logic_vector(REG_WIDTH - 1 downto 0);
 
   -----------------------------------------------------------------------------
   -- HAPLO STREAMS
@@ -254,7 +255,6 @@ architecture pairhmm_unit of pairhmm_unit is
   constant INDEX_WIDTH_READ            : natural := 32;
   constant VALUE_ELEM_WIDTH_READ_BP    : natural := 8;  -- 8 bit character
   constant VALUE_ELEM_WIDTH_READ_PROBS : natural := 8 * 32;  -- 8 * 32-bit probabilities
-  constant VALUES_PER_CYCLE_READ       : natural := 1;
   constant NUM_STREAMS_READ            : natural := 3;  -- index stream, data stream en nog wat
   constant VALUES_WIDTH_READ           : natural := VALUE_ELEM_WIDTH_READ_BP + VALUE_ELEM_WIDTH_READ_PROBS;
   constant OUT_DATA_WIDTH_READ         : natural := INDEX_WIDTH_READ + VALUES_WIDTH_READ;
@@ -361,14 +361,12 @@ architecture pairhmm_unit of pairhmm_unit is
   -----------------------------------------------------------------------------
   -- Result ColumnWriter Interface
   -----------------------------------------------------------------------------
-  constant INDEX_WIDTH_RESULT        : natural := 32;
-  constant VALUE_ELEM_WIDTH_RESULT   : natural := 32;
-  constant VALUES_PER_CYCLE_RESULT   : natural := 1;
-  constant NUM_STREAMS_RESULT        : natural := 1;  -- data stream
-  constant VALUES_WIDTH_RESULT       : natural := VALUE_ELEM_WIDTH_RESULT * VALUES_PER_CYCLE_RESULT;
-  constant VALUES_COUNT_WIDTH_RESULT : natural := log2ceil(VALUES_PER_CYCLE_RESULT) + 1;
-  constant IN_DATA_WIDTH_RESULT      : natural := INDEX_WIDTH_RESULT + VALUES_WIDTH_RESULT + VALUES_COUNT_WIDTH_RESULT;
-  constant TAG_WIDTH_RESULT          : natural := 1;
+  constant INDEX_WIDTH_RESULT      : natural := 32;
+  constant VALUE_ELEM_WIDTH_RESULT : natural := 32;
+  constant VALUES_PER_CYCLE_RESULT : natural := 1;
+  constant NUM_STREAMS_RESULT      : natural := 1;  -- data stream
+  constant VALUES_WIDTH_RESULT     : natural := VALUE_ELEM_WIDTH_RESULT * VALUES_PER_CYCLE_RESULT;
+  constant TAG_WIDTH_RESULT        : natural := 1;
 
   signal in_result_valid  : std_logic_vector(NUM_STREAMS_RESULT - 1 downto 0);
   signal in_result_ready  : std_logic_vector(NUM_STREAMS_RESULT - 1 downto 0);
@@ -453,24 +451,6 @@ architecture pairhmm_unit of pairhmm_unit is
   -----------------------------------------------------------------------------
   type state_t is (STATE_IDLE, STATE_RESET_START, STATE_REQUEST, STATE_BUSY, STATE_DONE);
 
-  type regex_in_t is record
-    valid : std_logic;
-    data  : std_logic_vector(VALUES_WIDTH_HAPL - 1 downto 0);
-    mask  : std_logic_vector(VALUES_PER_CYCLE_HAPL - 1 downto 0);
-    last  : std_logic;
-  end record;
-
-  type regex_out_t is record
-    valid : std_logic;
-    match : std_logic;
-    error : std_logic;
-  end record;
-
-  type regex_t is record
-    input  : regex_in_t;
-    output : regex_out_t;
-  end record;
-
   -- Control and status bits
   type cs_t is record
     reset_start : std_logic;
@@ -484,8 +464,6 @@ architecture pairhmm_unit of pairhmm_unit is
 
     command_hapl : command_hapl_t;
     command_read : command_read_t;
-
-    regex : regex_t;
 
     str_hapl_elem_out : str_hapl_elem_out_t;
     str_hapl_elem_in  : str_hapl_elem_in_t;
@@ -512,6 +490,7 @@ architecture pairhmm_unit of pairhmm_unit is
 
     reset_units : std_logic;
   end record;
+
   signal cw_r, cw_d : reg_result;
 
   -- Pair-HMM SA core signals
@@ -519,10 +498,8 @@ architecture pairhmm_unit of pairhmm_unit is
   signal re     : cu_ext;
   signal qs, rs : cu_sched := cu_sched_empty;
 
-  signal read_delay                        : bp_type;
-  signal valid_delay                       : std_logic;
-  signal cell_delay                        : pe_cell_type;
-  signal ybus_data_delay, ybus_data_delay1 : pe_y_data_type;
+  signal read_delay, read_delay_n           : bp_type;
+  signal ybus_data_delay, ybus_data_delay_n : pe_y_data_type;
 
   type basedelay_type is array (0 to PE_DEPTH - 1) of bp_type;
   signal readdelay, hapldelay : basedelay_type;
@@ -530,11 +507,10 @@ architecture pairhmm_unit of pairhmm_unit is
   type probdelay_type is array (0 to PE_DEPTH - 1) of std_logic_vector(PAIRHMM_BITS_PER_PROB - 1 downto 0);
   signal probdelay : probdelay_type;
 
-  signal in_posit : probabilities;
+  signal in_posit, in_posit_n : probabilities;
 
   signal read_delay_count, hapl_delay_count, prob_delay_count : integer range 0 to 63 := 0;
   signal read_delay_valid, hapl_delay_valid, prob_delay_valid : std_logic;
-  signal read_delay_rst, hapl_delay_rst, prob_delay_rst       : std_logic;
 
 begin
   reset <= not reset_n;
@@ -826,6 +802,7 @@ begin
       r_batch_offset <= batch_offset;
 
       -- Batch information
+      r_batches    <= batches;
       r_x_len      <= x_len;
       r_y_len      <= y_len;
       r_x_size     <= x_size;
@@ -1032,8 +1009,8 @@ begin
       when LOAD_LOAD_INIT =>
         v.initial := r_initial;
 
-        v.wed.batches_total := to_unsigned(2, 32);  -- TODO make this variable
-        v.wed.batches       := to_unsigned(2, 32);  -- TODO make this variable
+        v.wed.batches_total := u(r_batches);
+        v.wed.batches       := u(r_batches);
         v.inits.x_len       := u(r_x_len);
         v.inits.y_len       := u(r_y_len);
         v.inits.x_size      := u(r_x_size);
@@ -1231,7 +1208,7 @@ begin
   -- |____/   \__,_| |___/  \___|   |_|      |_____| |_|       \____/  |___/
 
   -- Read shift register
-  process(re, rs, read_delay_count, read_delay_rst)
+  process(re.clk_kernel, reset, re.readfifo, rs.shift_read_buffer, rs.read_delay_rst, read_delay_count)
   begin
     read_delay_valid <= '0';
     if(read_delay_count > PE_DEPTH-1) then
@@ -1285,14 +1262,14 @@ begin
         end if;
       end if;
 
-      if(read_delay_rst = '1') then
+      if(rs.read_delay_rst = '1' or reset = '1') then
         read_delay_count <= 0;
       end if;
     end if;
   end process;
 
   -- Prob shift register
-  process(re, r, rs, prob_delay_count, prob_delay_rst)
+  process(re.clk_kernel, reset, re.probfifo, rs.shift_prob_buffer, rs.prob_delay_rst, prob_delay_count)
   begin
     prob_delay_valid <= '0';
     if(prob_delay_count > PE_DEPTH-1) then
@@ -1346,14 +1323,14 @@ begin
         end if;
       end if;
 
-      if(prob_delay_rst = '1') then
+      if(rs.prob_delay_rst = '1' or reset = '1') then
         prob_delay_count <= 0;
       end if;
     end if;
   end process;
 
   -- Haplotype shift register
-  process(re, rs, hapl_delay_count, hapl_delay_rst)
+  process(re.clk_kernel, reset, re.haplfifo, rs.shift_hapl_buffer, rs.hapl_delay_rst, hapl_delay_count)
   begin
     hapl_delay_valid <= '0';
     if(hapl_delay_count > PE_DEPTH-1) then
@@ -1407,7 +1384,7 @@ begin
         end if;
       end if;
 
-      if(hapl_delay_rst = '1') then
+      if(rs.hapl_delay_rst = '1' or reset = '1') then
         hapl_delay_count <= 0;
       end if;
     end if;
@@ -1499,34 +1476,42 @@ begin
   -- Input for the first PE
   re.pairhmm.i.first <= rs.pe_first;
 
-  -- Base X for the first PE must come from the read RAM or it must come from the feedback FIFO with a latency of 1
-  process(re, rs)
+  -- Base X for the first PE must come from the read FIFO or it must come from the feedback FIFO with a latency of 1
+  process(rs.ybus_addr1, rs.leny_init, rs.core_schedule1)
   begin
-    if(rs.feedback_rd_en1 = '0') then
-      if(rs.ybus_addr1 < rs.leny) then
-        read_delay <= readdelay(PE_DEPTH - 1 - int(rs.core_schedule));
-      else
-        read_delay <= BP_STOP;
-      end if;
+    if(rs.ybus_addr1 < rs.leny_init) then
+      read_delay_n <= readdelay(PE_DEPTH - 1 - int(rs.core_schedule1));
     else
-      read_delay <= rs.pe_first.x;
+      read_delay_n <= BP_STOP;
     end if;
   end process;
 
-  re.pairhmm.i.x         <= read_delay;
+  re.pairhmm.i.x         <= read_delay when rs.feedback_rd_en1 = '0' else rs.pe_first.x;
   re.pairhmm.i.ybus.data <= ybus_data_delay;
 
   -- Schedule
-  re.pairhmm.i.schedule <= rs.core_schedule;
+  re.pairhmm.i.schedule <= rs.core_schedule2;
 
   -- Address for Y bus
-  re.pairhmm.i.ybus.addr <= rs.ybus_addr1;
-  re.pairhmm.i.ybus.wren <= rs.ybus_en1;
+  re.pairhmm.i.ybus.addr <= rs.ybus_addr2;
+  re.pairhmm.i.ybus.wren <= rs.ybus_en2;
 
   -- Data for Y bus
   ybus_data_sel : for J in 0 to PE_DEPTH - 1 generate
-    ybus_data_delay(J) <= hapldelay(PE_DEPTH - J - 1) when rs.ybus_addr1 < rs.leny else BP_STOP;
+    ybus_data_delay_n(J) <= hapldelay(PE_DEPTH - J - 1) when rs.ybus_addr1 < rs.leny else BP_STOP;  -- TODO Laurens: removed +1 because ybus.data needed 1 more column
   end generate;
+
+  process(re.clk_kernel)
+  begin
+    if(rising_edge(re.clk_kernel)) then
+      if(reset = '1') then
+        read_delay <= BP_IGNORE;
+      else
+        read_delay      <= read_delay_n;
+        ybus_data_delay <= ybus_data_delay_n;
+      end if;
+    end if;
+  end process;
 
   -- Core instantiation
   pairhmm_core : entity work.pairhmm port map (
@@ -1546,25 +1531,55 @@ begin
   --                |_|
   ---------------------------------------------------------------------------------------------------
   -- Connect PAIRHMM inputs
+
+  process(probdelay, rs.schedule1)
+  begin
+    in_posit_n.distm_simi <= probdelay(int(PE_DEPTH - 1 - rs.schedule1))(31 downto 0);
+    in_posit_n.distm_diff <= probdelay(int(PE_DEPTH - 1 - rs.schedule1))(63 downto 32);
+    in_posit_n.alpha      <= probdelay(int(PE_DEPTH - 1 - rs.schedule1))(95 downto 64);
+    in_posit_n.beta       <= probdelay(int(PE_DEPTH - 1 - rs.schedule1))(127 downto 96);
+    in_posit_n.delta      <= probdelay(int(PE_DEPTH - 1 - rs.schedule1))(159 downto 128);
+    in_posit_n.epsilon    <= probdelay(int(PE_DEPTH - 1 - rs.schedule1))(191 downto 160);
+    in_posit_n.zeta       <= probdelay(int(PE_DEPTH - 1 - rs.schedule1))(223 downto 192);
+    in_posit_n.eta        <= probdelay(int(PE_DEPTH - 1 - rs.schedule1))(255 downto 224);
+  end process;
+
+  process(re.clk_kernel)
+  begin
+    if(rising_edge(re.clk_kernel)) then
+      if(reset = '1') then
+        in_posit               <= probabilities_empty;
+        re.pairhmm_in1.en      <= '0';
+        re.pairhmm_in1.valid   <= '0';
+        re.pairhmm_in1.cell    <= PE_TOP;
+        re.pairhmm_in1.initial <= (others => '0');
+        re.pairhmm_in1.mids    <= mids_raw_empty;
+      else
+        in_posit               <= in_posit_n;
+        re.pairhmm_in1.en      <= re.pairhmm_in.en;
+        re.pairhmm_in1.valid   <= re.pairhmm_in.valid;
+        re.pairhmm_in1.cell    <= re.pairhmm_in.cell;
+        re.pairhmm_in1.initial <= re.pairhmm_in.initial;
+        re.pairhmm_in1.mids    <= re.pairhmm_in.mids;
+      end if;
+    end if;
+  end process;
+
   re.pairhmm_in.en    <= '1';
   re.pairhmm_in.valid <= rs.valid;
   re.pairhmm_in.cell  <= rs.cell;
 
-  process(probdelay, rs.schedule)
-  begin
-    in_posit.distm_simi <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(31 downto 0);
-    in_posit.distm_diff <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(63 downto 32);
-    in_posit.alpha      <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(95 downto 64);
-    in_posit.beta       <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(127 downto 96);
-    in_posit.delta      <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(159 downto 128);
-    in_posit.epsilon    <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(191 downto 160);
-    in_posit.zeta       <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(223 downto 192);
-    in_posit.eta        <= probdelay(int(PE_DEPTH - 1 - rs.schedule))(255 downto 224);
-  end process;
+  re.pairhmm_in.mids.itl <= value_empty;
+  re.pairhmm_in.mids.mtl <= value_empty;
+  re.pairhmm_in.mids.ml  <= value_empty;
+  re.pairhmm_in.mids.il  <= value_empty;
+  re.pairhmm_in.mids.dl  <= value_empty;
+  re.pairhmm_in.mids.mt  <= value_empty;
+  re.pairhmm_in.mids.it  <= value_empty;
+  re.pairhmm_in.mids.dt  <= value_empty;
 
   -- POSIT EXTRACTION
   gen_posit_extract_raw_es2 : if POSIT_ES = 2 generate
-
     -- Set top left input to 1.0 when this is the first cycle of this pair.
     -- Initial input for first PE
     extract_initial_es2 : posit_extract_raw port map (
@@ -1575,58 +1590,48 @@ begin
     -- Select initial value to travel with systolic array
     re.pairhmm_in.initial <= re.pairhmm_in.mids.dtl;
 
-    re.pairhmm_in.mids.itl <= value_empty;
-    re.pairhmm_in.mids.mtl <= value_empty;
-    re.pairhmm_in.mids.ml  <= value_empty;
-    re.pairhmm_in.mids.il  <= value_empty;
-    re.pairhmm_in.mids.dl  <= value_empty;
-    re.pairhmm_in.mids.mt  <= value_empty;
-    re.pairhmm_in.mids.it  <= value_empty;
-    re.pairhmm_in.mids.dt  <= value_empty;
-
     extract_distm_simi_es2 : posit_extract_raw port map (
       in1      => in_posit.distm_simi,
       absolute => open,
-      result   => re.pairhmm_in.emis.distm_simi
+      result   => re.pairhmm_in1.emis.distm_simi
       );
     extract_distm_diff_es2 : posit_extract_raw port map (
       in1      => in_posit.distm_diff,
       absolute => open,
-      result   => re.pairhmm_in.emis.distm_diff
+      result   => re.pairhmm_in1.emis.distm_diff
       );
     extract_alpha_es2 : posit_extract_raw port map (
       in1      => in_posit.alpha,
       absolute => open,
-      result   => re.pairhmm_in.tmis.alpha
+      result   => re.pairhmm_in1.tmis.alpha
       );
     extract_beta_es2 : posit_extract_raw port map (
       in1      => in_posit.beta,
       absolute => open,
-      result   => re.pairhmm_in.tmis.beta
+      result   => re.pairhmm_in1.tmis.beta
       );
     extract_delta_es2 : posit_extract_raw port map (
       in1      => in_posit.delta,
       absolute => open,
-      result   => re.pairhmm_in.tmis.delta
+      result   => re.pairhmm_in1.tmis.delta
       );
     extract_epsilon_es2 : posit_extract_raw port map (
       in1      => in_posit.epsilon,
       absolute => open,
-      result   => re.pairhmm_in.tmis.epsilon
+      result   => re.pairhmm_in1.tmis.epsilon
       );
     extract_zeta_es2 : posit_extract_raw port map (
       in1      => in_posit.zeta,
       absolute => open,
-      result   => re.pairhmm_in.tmis.zeta
+      result   => re.pairhmm_in1.tmis.zeta
       );
     extract_eta_es2 : posit_extract_raw port map (
       in1      => in_posit.eta,
       absolute => open,
-      result   => re.pairhmm_in.tmis.eta
+      result   => re.pairhmm_in1.tmis.eta
       );
   end generate;
   gen_posit_extract_raw_es3 : if POSIT_ES = 3 generate
-
     -- Set top left input to 1.0 when this is the first cycle of this pair.
     -- Initial input for first PE
     extract_initial_es3 : posit_extract_raw_es3 port map (
@@ -1637,54 +1642,45 @@ begin
     -- Select initial value to travel with systolic array
     re.pairhmm_in.initial <= re.pairhmm_in.mids.dtl;
 
-    re.pairhmm_in.mids.itl <= value_empty;
-    re.pairhmm_in.mids.mtl <= value_empty;
-    re.pairhmm_in.mids.ml  <= value_empty;
-    re.pairhmm_in.mids.il  <= value_empty;
-    re.pairhmm_in.mids.dl  <= value_empty;
-    re.pairhmm_in.mids.mt  <= value_empty;
-    re.pairhmm_in.mids.it  <= value_empty;
-    re.pairhmm_in.mids.dt  <= value_empty;
-
     extract_distm_simi_es3 : posit_extract_raw_es3 port map (
       in1      => in_posit.distm_simi,
       absolute => open,
-      result   => re.pairhmm_in.emis.distm_simi
+      result   => re.pairhmm_in1.emis.distm_simi
       );
     extract_distm_diff_es3 : posit_extract_raw_es3 port map (
       in1      => in_posit.distm_diff,
       absolute => open,
-      result   => re.pairhmm_in.emis.distm_diff
+      result   => re.pairhmm_in1.emis.distm_diff
       );
     extract_alpha_es3 : posit_extract_raw_es3 port map (
       in1      => in_posit.alpha,
       absolute => open,
-      result   => re.pairhmm_in.tmis.alpha
+      result   => re.pairhmm_in1.tmis.alpha
       );
     extract_beta_es3 : posit_extract_raw_es3 port map (
       in1      => in_posit.beta,
       absolute => open,
-      result   => re.pairhmm_in.tmis.beta
+      result   => re.pairhmm_in1.tmis.beta
       );
     extract_delta_es3 : posit_extract_raw_es3 port map (
       in1      => in_posit.delta,
       absolute => open,
-      result   => re.pairhmm_in.tmis.delta
+      result   => re.pairhmm_in1.tmis.delta
       );
     extract_epsilon_es3 : posit_extract_raw_es3 port map (
       in1      => in_posit.epsilon,
       absolute => open,
-      result   => re.pairhmm_in.tmis.epsilon
+      result   => re.pairhmm_in1.tmis.epsilon
       );
     extract_zeta_es3 : posit_extract_raw_es3 port map (
       in1      => in_posit.zeta,
       absolute => open,
-      result   => re.pairhmm_in.tmis.zeta
+      result   => re.pairhmm_in1.tmis.zeta
       );
     extract_eta_es3 : posit_extract_raw_es3 port map (
       in1      => in_posit.eta,
       absolute => open,
-      result   => re.pairhmm_in.tmis.eta
+      result   => re.pairhmm_in1.tmis.eta
       );
   end generate;
 
@@ -1727,55 +1723,54 @@ begin
   -- |_|    \___|  \___|  \__,_| |_.__/   \__,_|  \___| |_|\_\
   ---------------------------------------------------------------------------------------------------
 
-  gen_fb_in : if POSIT_ES = 2 or POSIT_ES = 3 generate
-    re.fbfifo.din(37 downto 0)    <= re.pairhmm.o.last.mids.ml;
-    re.fbfifo.din(113 downto 76)  <= re.pairhmm.o.last.mids.dl;
-    re.fbfifo.din(151 downto 114) <= re.pairhmm.o.last.emis.distm_simi;
-    re.fbfifo.din(189 downto 152) <= re.pairhmm.o.last.emis.distm_diff;
-    re.fbfifo.din(227 downto 190) <= re.pairhmm.o.last.tmis.alpha;
-    re.fbfifo.din(265 downto 228) <= re.pairhmm.o.last.tmis.beta;
-    re.fbfifo.din(303 downto 266) <= re.pairhmm.o.last.tmis.delta;
-    re.fbfifo.din(341 downto 304) <= re.pairhmm.o.last.tmis.epsilon;
-    re.fbfifo.din(379 downto 342) <= re.pairhmm.o.last.tmis.zeta;
-    re.fbfifo.din(417 downto 380) <= re.pairhmm.o.last.tmis.eta;
-    re.fbfifo.din(420 downto 418) <= bpslv3(re.pairhmm.o.last.x);
-    re.fbfifo.din(458 downto 421) <= re.pairhmm.o.last.initial;
+  re.fbfifo.din(37 downto 0)    <= re.pairhmm.o.last.mids.ml;
+  re.fbfifo.din(75 downto 38)   <= re.pairhmm.o.last.mids.il;
+  re.fbfifo.din(113 downto 76)  <= re.pairhmm.o.last.mids.dl;
+  re.fbfifo.din(151 downto 114) <= re.pairhmm.o.last.emis.distm_simi;
+  re.fbfifo.din(189 downto 152) <= re.pairhmm.o.last.emis.distm_diff;
+  re.fbfifo.din(227 downto 190) <= re.pairhmm.o.last.tmis.alpha;
+  re.fbfifo.din(265 downto 228) <= re.pairhmm.o.last.tmis.beta;
+  re.fbfifo.din(303 downto 266) <= re.pairhmm.o.last.tmis.delta;
+  re.fbfifo.din(341 downto 304) <= re.pairhmm.o.last.tmis.epsilon;
+  re.fbfifo.din(379 downto 342) <= re.pairhmm.o.last.tmis.zeta;
+  re.fbfifo.din(417 downto 380) <= re.pairhmm.o.last.tmis.eta;
+  re.fbfifo.din(420 downto 418) <= bpslv3(re.pairhmm.o.last.x);
+  re.fbfifo.din(458 downto 421) <= re.pairhmm.o.last.initial;
 
-    fbfifo : feedback_fifo_es3 port map (
-      din       => re.fbfifo.din,
-      dout      => re.fbfifo.dout,
-      clk       => re.clk_kernel,
-      srst      => re.fbfifo.c.rst,
-      wr_en     => re.fbfifo.c.wr_en,
-      rd_en     => re.fbfifo.c.rd_en,
-      wr_ack    => re.fbfifo.c.wr_ack,
-      valid     => re.fbfifo.c.valid,
-      full      => re.fbfifo.c.full,
-      empty     => re.fbfifo.c.empty,
-      overflow  => re.fbfifo.c.overflow,
-      underflow => re.fbfifo.c.underflow
-      );
+  fbfifo : feedback_fifo_es3 port map (
+    din       => re.fbfifo.din,
+    dout      => re.fbfifo.dout,
+    clk       => re.clk_kernel,
+    srst      => re.fbfifo.c.rst,
+    wr_en     => re.fbfifo.c.wr_en,
+    rd_en     => re.fbfifo.c.rd_en,
+    wr_ack    => re.fbfifo.c.wr_ack,
+    valid     => re.fbfifo.c.valid,
+    full      => re.fbfifo.c.full,
+    empty     => re.fbfifo.c.empty,
+    overflow  => re.fbfifo.c.overflow,
+    underflow => re.fbfifo.c.underflow
+    );
 
-    re.fbpairhmm.mids.ml         <= re.fbfifo.dout(37 downto 0);
-    re.fbpairhmm.mids.il         <= re.fbfifo.dout(75 downto 38);
-    re.fbpairhmm.mids.dl         <= re.fbfifo.dout(113 downto 76);
-    re.fbpairhmm.emis.distm_simi <= re.fbfifo.dout(151 downto 114);
-    re.fbpairhmm.emis.distm_diff <= re.fbfifo.dout(189 downto 152);
-    re.fbpairhmm.tmis.alpha      <= re.fbfifo.dout(227 downto 190);
-    re.fbpairhmm.tmis.beta       <= re.fbfifo.dout(265 downto 228);
-    re.fbpairhmm.tmis.delta      <= re.fbfifo.dout(303 downto 266);
-    re.fbpairhmm.tmis.epsilon    <= re.fbfifo.dout(341 downto 304);
-    re.fbpairhmm.tmis.zeta       <= re.fbfifo.dout(379 downto 342);
-    re.fbpairhmm.tmis.eta        <= re.fbfifo.dout(417 downto 380);
-    re.fbpairhmm.x               <= slv3bp(re.fbfifo.dout(420 downto 418));
-    re.fbpairhmm.initial         <= re.fbfifo.dout(458 downto 421);
-  end generate;
+  re.fbpairhmm.mids.ml         <= re.fbfifo.dout(37 downto 0);
+  re.fbpairhmm.mids.il         <= re.fbfifo.dout(75 downto 38);
+  re.fbpairhmm.mids.dl         <= re.fbfifo.dout(113 downto 76);
+  re.fbpairhmm.emis.distm_simi <= re.fbfifo.dout(151 downto 114);
+  re.fbpairhmm.emis.distm_diff <= re.fbfifo.dout(189 downto 152);
+  re.fbpairhmm.tmis.alpha      <= re.fbfifo.dout(227 downto 190);
+  re.fbpairhmm.tmis.beta       <= re.fbfifo.dout(265 downto 228);
+  re.fbpairhmm.tmis.delta      <= re.fbfifo.dout(303 downto 266);
+  re.fbpairhmm.tmis.epsilon    <= re.fbfifo.dout(341 downto 304);
+  re.fbpairhmm.tmis.zeta       <= re.fbfifo.dout(379 downto 342);
+  re.fbpairhmm.tmis.eta        <= re.fbfifo.dout(417 downto 380);
+  re.fbpairhmm.x               <= slv3bp(re.fbfifo.dout(420 downto 418));
+  re.fbpairhmm.initial         <= re.fbfifo.dout(458 downto 421);
 
   re.fbfifo.c.rst <= rs.feedback_rst;
 
-  -- Set top left input to 1.0 when this is the first cycle of this pair.
-  -- with rs.cycle select
-  re.fbpairhmm.mids.mtl <= value_one when rs.cycle = CYCLE_ZERO else value_empty;
+-- Set top left input to 1.0 when this is the first cycle of this pair.
+-- with rs.cycle select
+  re.fbpairhmm.mids.mtl <= value_one when rs.cycle1 = CYCLE_ZERO else value_empty;
 
   re.fbpairhmm.mids.itl <= value_empty;
   re.fbpairhmm.mids.dtl <= value_empty;
@@ -1783,13 +1778,13 @@ begin
   re.fbpairhmm.mids.it  <= value_empty;
   re.fbpairhmm.mids.dt  <= value_empty;
 
-  -- latency of 1 to match delay of read and hapl rams
-  re.fbfifo.c.rd_en <= rs.feedback_rd_en;
+-- latency of 1 to match delay of read and hapl rams
+  re.fbfifo.c.rd_en <= rs.feedback_rd_en1;
   re.fbfifo.c.wr_en <= rs.feedback_wr_en and re.pairhmm.o.last.valid;
 
   re.fbpairhmm.en    <= '1';
-  re.fbpairhmm.valid <= rs.valid;
-  re.fbpairhmm.cell  <= rs.cell;
+  re.fbpairhmm.valid <= rs.valid1;
+  re.fbpairhmm.cell  <= rs.cell1;
 
 
   ---------------------------------------------------------------------------------------------------
@@ -1816,17 +1811,25 @@ begin
     vs.shift_hapl_buffer := '0';
 
     -- Select the proper input, also correct for latency of 1 of the hapl and read RAMs:
-    if rs.feedback_rd_en = '0' then
-      vs.pe_first := re.pairhmm_in;
+    if rs.feedback_rd_en1 = '0' then    -- TODO changed this
+      vs.pe_first := re.pairhmm_in1;
     else
       vs.pe_first := re.fbpairhmm;
     end if;
 
     -- Control signals that also need a latency of 1 for this reason:
     vs.ybus_addr1      := rs.ybus_addr;
+    vs.ybus_addr2      := rs.ybus_addr1;
+    vs.schedule1       := rs.schedule;
     vs.core_schedule   := rs.schedule;
+    vs.core_schedule1  := rs.core_schedule;
+    vs.core_schedule2  := rs.core_schedule1;
     vs.feedback_rd_en1 := rs.feedback_rd_en;
     vs.ybus_en1        := rs.ybus_en;
+    vs.ybus_en2        := rs.ybus_en1;
+    vs.cell1           := rs.cell;
+    vs.valid1          := rs.valid;
+    vs.cycle1          := rs.cycle;
 
 --------------------------------------------------------------------------------------------------- round robin schedule
     -- Schedule is always running, this is to keep the PairHMM core running even when the scheduler
@@ -1837,20 +1840,21 @@ begin
     vs.schedule := rs.schedule + 1;
 
     -- Wrap around (required when log2(PE_DEPTH) is not an integer
-    if vs.schedule = PE_DEPTH then
+    if rs.schedule = PE_DEPTH-1 then
       vs.schedule := (others => '0');
     end if;
 
-    read_delay_rst <= '0';
-    hapl_delay_rst <= '0';
-    prob_delay_rst <= '0';
+    vs.read_delay_rst := '0';
+    vs.hapl_delay_rst := '0';
+    vs.prob_delay_rst := '0';
 
 --------------------------------------------------------------------------------------------------- state machine
     case rs.state is
       when SCHED_IDLE =>
         -- Gather the sizes, bases and initial D row value from the other clock domain
-        vs.leny  := r.sched.y_len(log2e(PAIRHMM_MAX_SIZE) downto 0);
-        vs.sizey := r.sched.y_size(log2e(PAIRHMM_MAX_SIZE) downto 0);
+        vs.leny      := r.sched.y_len(log2e(PAIRHMM_MAX_SIZE) downto 0);
+        vs.leny_init := r.sched.y_len(log2e(PAIRHMM_MAX_SIZE) downto 0);
+        vs.sizey     := r.sched.y_size(log2e(PAIRHMM_MAX_SIZE) downto 0);
 
         vs.lenx   := r.sched.x_len(log2e(PAIRHMM_MAX_SIZE) downto 0);
         vs.sizex  := r.sched.x_size(log2e(PAIRHMM_MAX_SIZE) downto 0);
@@ -1876,7 +1880,7 @@ begin
 
         -- Start everything when the FIFO's are filled and align with the scheduler
         -- Starting up takes two cycles, thus we wait until the scheduler is at PE_DEPTH - 2.
-        if r.filled = '1' and rs.schedule = PE_DEPTH - 2 and read_delay_valid = '1' then
+        if r.filled = '1' and rs.schedule1 = PE_DEPTH - 2 and read_delay_valid = '1' then
           vs.state        := SCHED_STARTUP;
           vs.feedback_rst := '0';
           vs.pairhmm_rst  := '0';
@@ -1890,10 +1894,10 @@ begin
         vs.ybus_en   := '1';
 
       when SCHED_PROCESSING =>
-        if(rs.ybus_addr = rs.leny and rs.schedule = PE_DEPTH-1) then
-          read_delay_rst <= '1';
-          hapl_delay_rst <= '1';
-          prob_delay_rst <= '1';
+        if(rs.ybus_addr = rs.leny_init and rs.schedule1 = PE_DEPTH-2) then
+          vs.read_delay_rst := '1';
+          vs.hapl_delay_rst := '1';
+          vs.prob_delay_rst := '1';
         end if;
 
         -- Unset the startflag
@@ -1901,11 +1905,14 @@ begin
 
         -- Increase PairHMM cycle, except when this is the first cycle, which we can check by looking at the last bit of fifo_rd_en
         -- Everything inside this if statement is triggered when a new cell update cycle starts
-        if vs.schedule = u(PE_DEPTH - 4, PE_DEPTH_BITS) and rs.startflag = '0' and rs.ybus_addr1 < rs.leny-1 then
+        if rs.schedule1 = u(PE_DEPTH - 5, PE_DEPTH_BITS) and rs.startflag = '0' and rs.ybus_addr1 < rs.leny-1 then
           vs.shift_prob_buffer := '1';
+          if rs.cell = PE_BOTTOM then
+            vs.shift_hapl_buffer := '1';
+          end if;
         end if;
 
-        if vs.schedule = u(PE_DEPTH - 3, PE_DEPTH_BITS) and rs.startflag = '0' and rs.ybus_addr1 < rs.leny-1 then
+        if rs.schedule1 = u(PE_DEPTH - 4, PE_DEPTH_BITS) and rs.startflag = '0' and rs.ybus_addr1 < rs.leny-1 then
           vs.shift_prob_buffer := '0';
           vs.shift_read_buffer := '1';
 
@@ -1914,13 +1921,13 @@ begin
           end if;
         end if;
 
-        if vs.schedule = u(PE_DEPTH - 2, PE_DEPTH_BITS) and rs.startflag = '0' then
+        if rs.schedule1 = u(PE_DEPTH - 3, PE_DEPTH_BITS) and rs.startflag = '0' then
           vs.shift_read_buffer := '0';
           vs.shift_hapl_buffer := '0';
           vs.shift_prob_buffer := '0';
         end if;
 
-        if vs.schedule = u(0, PE_DEPTH_BITS) and rs.startflag = '0' then
+        if rs.schedule1 = u(PE_DEPTH - 1, PE_DEPTH_BITS) and rs.startflag = '0' then
           vs.cycle             := rs.cycle + 1;  -- Increase the total cycle counter
           vs.basepair          := rs.basepair + 1;  -- Increase the counter of Y
           vs.shift_read_buffer := '0';
@@ -1934,7 +1941,7 @@ begin
           end if;
 
           -- If we are done with the last padded base of X
-          if vs.basepair = rs.sizexp then
+          if rs.basepair = rs.sizexp - 1 then
             -- If this is not the last base
             if rs.cell /= PE_LAST then
               vs.supercolumn := rs.supercolumn + 1;  -- Advance to the next supercolumn
@@ -1942,6 +1949,7 @@ begin
               vs.ybus_addr   := (others => '0');
               vs.basepair    := (others => '0');  -- Reset the basepair counter of Y
               vs.sizey       := rs.sizey - PAIRHMM_NUM_PES;  -- Subtract size in the X direction
+              vs.leny        := rs.leny - PAIRHMM_NUM_PES;
               vs.ybus_en     := '1';    -- Write to first element in next cycle
             end if;
           end if;
@@ -1954,34 +1962,34 @@ begin
             vs.cell := PE_TOP;
           end if;
 
-                                        -- If we are at the last base of the read
-          if vs.basepair = rs.sizex - 1 then
-            vs.cell     := PE_BOTTOM;   -- Assert the "bottom" signal
-            if rs.sizey <= PAIRHMM_NUM_PES then
-              vs.cell := PE_LAST;       -- Assert the "last" signal
+          -- If we are at the last base of the read
+          if rs.basepair = rs.sizex - 2 then
+            vs.cell     := PE_BOTTOM;            -- Assert the "bottom" signal
+            if rs.sizey <= PAIRHMM_NUM_PES then  -- TODO should be leny?
+              vs.cell := PE_LAST;                -- Assert the "last" signal
             end if;
           end if;
 
-                                        -- If we fed the last base of the whole pair in the previous cell update cycle
+          -- If we fed the last base of the whole pair in the previous cell update cycle
           if rs.cell = PE_LAST then
             vs.valid := '0';            -- Next inputs are not valid anymore
             vs.cell  := PE_NORMAL;      -- Not last anymore
             vs.state := SCHED_DONE;
           end if;
-        end if;
 
-                                        -- Enable feedback FIFO writing when we passed the number of PE's the first time.
-        if vs.cycle = PAIRHMM_NUM_PES then
-          vs.feedback_wr_en := '1';
-        end if;
+          -- Enable feedback FIFO writing when we passed the number of PE's the first time
+          if rs.cycle = PAIRHMM_NUM_PES - 1 then
+            vs.feedback_wr_en := '1';
+          end if;
 
-                                        -- Enable feedback FIFO reading when we passed the number of padded bases the first time.
-        if vs.cycle = rs.sizexp then
-          vs.feedback_rd_en := '1';
+          -- Enable feedback FIFO reading when we passed the number of padded bases the first time
+          if rs.cycle = rs.sizexp - 1 and rs.cell /= PE_LAST then
+            vs.feedback_rd_en := '1';
+          end if;
         end if;
 
       when SCHED_DONE =>
-                                        -- Reset the feedback FIFO
+        -- Reset the feedback FIFO
         vs.feedback_rd_en := '0';
         vs.feedback_wr_en := '0';
         vs.feedback_rst   := '1';
@@ -1999,18 +2007,22 @@ begin
   begin
     if rising_edge(re.clk_kernel) then
       if reset = '1' then
-        rs.state          <= SCHED_IDLE;
-        rs.cycle          <= (others => '0');
-        rs.basepair       <= (others => '0');
-        rs.schedule       <= (others => '0');
-        rs.valid          <= '0';
-        rs.cell           <= PE_NORMAL;
-        rs.pairhmm_rst    <= '1';
-        rs.feedback_rd_en <= '0';
-        rs.feedback_wr_en <= '0';
-        rs.feedback_rst   <= '1';
-        rs.ybus_en        <= '0';
-        rs.ybus_en1       <= '0';
+        rs <= cu_sched_empty;
+      -- rs.state          <= SCHED_IDLE;
+      -- rs.cycle          <= (others => '0');
+      -- rs.pe_first       <= pe_in_empty;
+      -- rs.basepair       <= (others => '0');
+      -- rs.schedule       <= (others => '0');
+      -- rs.schedule1      <= (others => '0');
+      -- rs.valid          <= '0';
+      -- rs.cell           <= PE_NORMAL;
+      -- rs.pairhmm_rst    <= '1';
+      -- rs.feedback_rd_en <= '0';
+      -- rs.feedback_wr_en <= '0';
+      -- rs.feedback_rst   <= '1';
+      -- rs.ybus_en        <= '0';
+      -- rs.ybus_en1       <= '0';
+      -- rs.ybus_en2       <= '0';
       else
         rs <= qs;
       end if;

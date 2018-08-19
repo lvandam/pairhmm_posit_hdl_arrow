@@ -43,12 +43,6 @@ package cu_snap_package is
     c    : fifo_controls;
   end record;
 
-  -- type fbfifo_item is record
-  --   din  : std_logic_vector(386 downto 0);
-  --   dout : std_logic_vector(386 downto 0);
-  --   c    : fifo_controls;
-  -- end record;
-
   type fbfifo_item is record
     din  : std_logic_vector(458 downto 0);
     dout : std_logic_vector(458 downto 0);
@@ -93,7 +87,6 @@ package cu_snap_package is
     wed   : wed_type;
 
     inits   : cu_inits;
-    -- initial : prob;
     initial : std_logic_vector(31 downto 0);
     sched   : cu_inits;
 
@@ -124,50 +117,58 @@ package cu_snap_package is
   type cu_sched is record
     pairhmm_rst : std_logic;            -- Reset
 
-    state       : cu_sched_state;       -- State of the scheduler process
-    cycle       : unsigned(CU_CYCLE_BITS - 1 downto 0);  -- This must be able to hold up to PAIRHMM_MAX_SIZE / PE_DEPTH * 2 * PAIRHMM_MAX_SIZE-1
-    basepair    : unsigned(log2e(PAIRHMM_MAX_SIZE) downto 0);  -- This must be able to hold up to PAIRHMM_MAX_SIZE-1 but is 1 larger to compare to size array values
-    element     : unsigned(log2e(PAIRHMM_NUM_PES) downto 0);  -- This must be able to hold PAIRHMM_NUM_PES-1
-    schedule    : unsigned(PE_DEPTH_BITS - 1 downto 0);  -- To hold the pair that is currently scheduled
-    supercolumn : unsigned(log2e(PAIRHMM_MAX_SIZE / PAIRHMM_NUM_PES) downto 0);  -- To keep track in which group of columns we are
+    state               : cu_sched_state;  -- State of the scheduler process
+    cycle, cycle1       : unsigned(CU_CYCLE_BITS - 1 downto 0);  -- This must be able to hold up to PAIRHMM_MAX_SIZE / PE_DEPTH * 2 * PAIRHMM_MAX_SIZE-1
+    basepair            : unsigned(log2e(PAIRHMM_MAX_SIZE) downto 0);  -- This must be able to hold up to PAIRHMM_MAX_SIZE-1 but is 1 larger to compare to size array values
+    element             : unsigned(log2e(PAIRHMM_NUM_PES) downto 0);  -- This must be able to hold PAIRHMM_NUM_PES-1
+    schedule, schedule1 : unsigned(PE_DEPTH_BITS - 1 downto 0);  -- To hold the pair that is currently scheduled
+    supercolumn         : unsigned(log2e(PAIRHMM_MAX_SIZE / PAIRHMM_NUM_PES) downto 0);  -- To keep track in which group of columns we are
 
-    valid : std_logic;                  -- Valid bit for the PairHMM core
-    cell  : pe_cell_type;  -- State of the cell for this bunch of data
+    valid, valid1 : std_logic;          -- Valid bit for the PairHMM core
+    cell, cell1   : pe_cell_type;  -- State of the cell for this bunch of data
 
     feedback                        : std_logic;  -- To select the feedback FIFO as PairHMM core input
     feedback_rd_en, feedback_rd_en1 : std_logic;  -- Read enable for the feedback FIFO
     feedback_wr_en                  : std_logic;  -- Write enable for the feedback FIFO
     feedback_rst                    : std_logic;  -- Feedback FIFO reset
 
-    leny   : unsigned(log2e(PAIRHMM_MAX_SIZE) downto 0);
-    sizey  : unsigned(log2e(PAIRHMM_MAX_SIZE) downto 0);  -- To keep track of howmany bp's each pair still has to process in y direction
-    lenx   : unsigned(log2e(PAIRHMM_MAX_SIZE) downto 0);
-    sizex  : unsigned(log2e(PAIRHMM_MAX_SIZE) downto 0);  -- To keep track of howmany bp's each pair still has to process in x direction
-    sizexp : unsigned(log2e(PAIRHMM_MAX_SIZE) downto 0);  -- To keep track of howmany bp's each pair still has to process in x direction (padded value)
+    leny, leny_init : unsigned(log2e(PAIRHMM_MAX_SIZE) downto 0);
+    sizey           : unsigned(log2e(PAIRHMM_MAX_SIZE) downto 0);  -- To keep track of howmany bp's each pair still has to process in y direction
+    lenx            : unsigned(log2e(PAIRHMM_MAX_SIZE) downto 0);
+    sizex           : unsigned(log2e(PAIRHMM_MAX_SIZE) downto 0);  -- To keep track of howmany bp's each pair still has to process in x direction
+    sizexp          : unsigned(log2e(PAIRHMM_MAX_SIZE) downto 0);  -- To keep track of howmany bp's each pair still has to process in x direction (padded value)
 
     startflag : std_logic;  -- To keep track of if we just started up a new pair
 
     pe_first : pe_in;
 
-    ybus_addr, ybus_addr1 : unsigned(log2e(PAIRHMM_NUM_PES) downto 0);
-    ybus_en, ybus_en1     : std_logic;
+    ybus_addr, ybus_addr1, ybus_addr2 : unsigned(log2e(PAIRHMM_NUM_PES) downto 0);
+    ybus_en, ybus_en1, ybus_en2       : std_logic;
 
-    core_schedule : unsigned(PE_DEPTH_BITS-1 downto 0);
+    core_schedule, core_schedule1, core_schedule2 : unsigned(PE_DEPTH_BITS-1 downto 0);
 
     shift_read_buffer : std_logic;
     shift_hapl_buffer : std_logic;
     shift_prob_buffer : std_logic;
+
+    read_delay_rst : std_logic;
+    hapl_delay_rst : std_logic;
+    prob_delay_rst : std_logic;
   end record;
 
   constant cu_sched_empty : cu_sched := (
     state             => SCHED_IDLE,
     cycle             => (others => '0'),
+    cycle1            => (others => '0'),
     basepair          => (others => '0'),
     element           => (others => '0'),
     schedule          => (others => '0'),
+    schedule1         => (others => '0'),
     supercolumn       => (others => '0'),
     valid             => '0',
+    valid1            => '0',
     cell              => PE_NORMAL,
+    cell1             => PE_NORMAL,
     pairhmm_rst       => '1',
     feedback          => '0',
     feedback_rd_en    => '0',
@@ -175,6 +176,7 @@ package cu_snap_package is
     feedback_wr_en    => '0',
     feedback_rst      => '1',
     leny              => (others => '0'),
+    leny_init         => (others => '0'),
     sizey             => (others => '0'),
     lenx              => (others => '0'),
     sizex             => (others => '0'),
@@ -183,29 +185,36 @@ package cu_snap_package is
     pe_first          => pe_in_empty,
     ybus_addr         => (others => '0'),
     ybus_addr1        => (others => '0'),
+    ybus_addr2        => (others => '0'),
     ybus_en           => '0',
     ybus_en1          => '0',
+    ybus_en2          => '0',
     core_schedule     => (others => '0'),
+    core_schedule1    => (others => '0'),
+    core_schedule2    => (others => '0'),
     shift_read_buffer => '0',
     shift_hapl_buffer => '0',
-    shift_prob_buffer => '0'
+    shift_prob_buffer => '0',
+    read_delay_rst    => '0',
+    hapl_delay_rst    => '0',
+    prob_delay_rst    => '0'
     );
 
   constant CYCLE_ZERO : unsigned(CU_CYCLE_BITS-1 downto 0) := usign(0, CU_CYCLE_BITS);
 
   type cu_ext is record
-    pairhmm_cr : cr_in;
-    pairhmm    : pairhmm_item;
-    pairhmm_in : pe_in;
-    outfifo    : outfifo_item;
-    fbfifo     : fbfifo_item;
+    pairhmm_cr              : cr_in;
+    pairhmm                 : pairhmm_item;
+    pairhmm_in, pairhmm_in1 : pe_in;
+    outfifo                 : outfifo_item;
+    fbfifo                  : fbfifo_item;
 
     haplfifo : basefifo_item;
     readfifo : basefifo_item;
     probfifo : probfifo_item;
 
-    fbpairhmm  : pe_in;
-    clk_kernel : std_logic;
+    fbpairhmm, fbpairhmm1 : pe_in;
+    clk_kernel            : std_logic;
   end record;
 
   procedure cu_reset (signal r : inout cu_int);
