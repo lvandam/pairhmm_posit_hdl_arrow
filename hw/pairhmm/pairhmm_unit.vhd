@@ -1477,7 +1477,7 @@ begin
   re.pairhmm.i.first <= rs.pe_first;
 
   -- Base X for the first PE must come from the read FIFO or it must come from the feedback FIFO with a latency of 1
-  process(rs.ybus_addr1, rs.leny_init, rs.core_schedule1)
+  process(rs.ybus_addr1, rs.leny_init, rs.core_schedule1, readdelay)
   begin
     if(rs.ybus_addr1 < rs.leny_init) then
       read_delay_n <= readdelay(PE_DEPTH - 1 - int(rs.core_schedule1));
@@ -2003,26 +2003,23 @@ begin
     qs <= vs;
   end process;
 --------------------------------------------------------------------------------------------------- registers
+
   scheduler_reg : process(re.clk_kernel)
   begin
     if rising_edge(re.clk_kernel) then
       if reset = '1' then
-        rs <= cu_sched_empty;
-      -- rs.state          <= SCHED_IDLE;
-      -- rs.cycle          <= (others => '0');
-      -- rs.pe_first       <= pe_in_empty;
-      -- rs.basepair       <= (others => '0');
-      -- rs.schedule       <= (others => '0');
-      -- rs.schedule1      <= (others => '0');
-      -- rs.valid          <= '0';
-      -- rs.cell           <= PE_NORMAL;
-      -- rs.pairhmm_rst    <= '1';
-      -- rs.feedback_rd_en <= '0';
-      -- rs.feedback_wr_en <= '0';
-      -- rs.feedback_rst   <= '1';
-      -- rs.ybus_en        <= '0';
-      -- rs.ybus_en1       <= '0';
-      -- rs.ybus_en2       <= '0';
+          rs.state          <= SCHED_IDLE;
+          rs.cycle          <= (others => '0');
+          rs.pe_first       <= pe_in_empty;
+          rs.basepair       <= (others => '0');
+          rs.schedule       <= (others => '0');
+          rs.valid          <= '0';
+          rs.cell           <= PE_NORMAL;
+          rs.pairhmm_rst    <= '1';
+          rs.feedback_rd_en <= '0';
+          rs.feedback_wr_en <= '0';
+          rs.feedback_rst   <= '1';
+          rs.ybus_en        <= '0';
       else
         rs <= qs;
       end if;

@@ -127,7 +127,6 @@ package cu_snap_package is
     valid, valid1 : std_logic;          -- Valid bit for the PairHMM core
     cell, cell1   : pe_cell_type;  -- State of the cell for this bunch of data
 
-    feedback                        : std_logic;  -- To select the feedback FIFO as PairHMM core input
     feedback_rd_en, feedback_rd_en1 : std_logic;  -- Read enable for the feedback FIFO
     feedback_wr_en                  : std_logic;  -- Write enable for the feedback FIFO
     feedback_rst                    : std_logic;  -- Feedback FIFO reset
@@ -170,7 +169,6 @@ package cu_snap_package is
     cell              => PE_NORMAL,
     cell1             => PE_NORMAL,
     pairhmm_rst       => '1',
-    feedback          => '0',
     feedback_rd_en    => '0',
     feedback_rd_en1   => '0',
     feedback_wr_en    => '0',
