@@ -511,6 +511,7 @@ architecture pairhmm_unit of pairhmm_unit is
 
   signal read_delay_count, hapl_delay_count, prob_delay_count : integer range 0 to 63 := 0;
   signal read_delay_valid, hapl_delay_valid, prob_delay_valid : std_logic;
+  signal haplfifo_reset                                       : std_logic;
 
 begin
   reset <= not reset_n;
@@ -946,6 +947,7 @@ begin
                         cmd_read_ready,
                         str_hapl_elem_in,
                         str_read_elem_in,
+                        re.haplfifo.c.empty,
                         r_hapl_off_hi, r_hapl_off_lo,
                         r_read_off_hi, r_read_off_lo,
                         r_hapl_bp_hi, r_hapl_bp_lo,
@@ -1020,6 +1022,11 @@ begin
         v.inits.x_bppadded  := u(r_x_bppadded);
 
         v.state := LOAD_REQUEST_DATA;
+
+      when LOAD_RESET_FIFO =>
+        if re.haplfifo.c.empty = '1' then
+          v.state := LOAD_REQUEST_DATA;
+        end if;
 
       -- Request all data
       when LOAD_REQUEST_DATA =>
@@ -1132,6 +1139,7 @@ begin
         -- If all (padded) bases of all reads and haplotypes are completely loaded,
         -- and if we have loaded all the (padded) probabilities of the batch into the FIFO's
         -- go to the next state to load the next batch information
+
         if r.x_reads = r.inits.x_padded + r.inits.x_len - 1 and r.y_reads = r.inits.y_padded + r.inits.y_len - 1 and r.p_reads = r.inits.x_padded + r.inits.x_len - 1 then
           v.wed.batches := r.wed.batches - 1;
           v.p_reads     := (others => '0');
@@ -1159,14 +1167,16 @@ begin
         if r.filled = '1' then
           -- And it's not idle anymore, it's busy with the new batch
           if rs.state /= SCHED_IDLE then
-            -- We can reset the filled bit to 0.
-            v.filled := '0';
             -- If there is still work to do:
-            if v.wed.batches /= 0 then
-              -- We can start loading a new batch
-              v.state := LOAD_REQUEST_DATA;
-            else
-              v.state := LOAD_DONE;
+            if rs.state = SCHED_DONE then
+              -- We can reset the filled bit to 0.
+              v.filled := '0';
+              if v.wed.batches /= 0 then
+                -- We can start loading a new batch
+                v.state := LOAD_RESET_FIFO;  --LOAD_REQUEST_DATA
+              else
+                v.state := LOAD_DONE;
+              end if;
             end if;
           end if;
         end if;
@@ -1264,6 +1274,7 @@ begin
 
       if(rs.read_delay_rst = '1' or reset = '1') then
         read_delay_count <= 0;
+        readdelay        <= (others => BP_IGNORE);
       end if;
     end if;
   end process;
@@ -1325,6 +1336,9 @@ begin
 
       if(rs.prob_delay_rst = '1' or reset = '1') then
         prob_delay_count <= 0;
+        for K in 0 to PE_DEPTH - 1 loop
+          probdelay(K) <= (others => '0');
+        end loop;
       end if;
     end if;
   end process;
@@ -1386,6 +1400,7 @@ begin
 
       if(rs.hapl_delay_rst = '1' or reset = '1') then
         hapl_delay_count <= 0;
+        hapldelay        <= (others => BP_IGNORE);
       end if;
     end if;
   end process;
@@ -1424,8 +1439,9 @@ begin
     );
   re.probfifo.c.wr_en <= r.prob_wren;
 
+  haplfifo_reset <= rs.haplfifo_reset or reset;
   hapl_fifo : base_fifo port map (
-    rst       => reset,
+    rst       => haplfifo_reset,
     wr_clk    => clk,
     rd_clk    => re.clk_kernel,
     din       => slv8bpslv3(r.hapl_data(7 downto 0)),
@@ -1486,7 +1502,7 @@ begin
     end if;
   end process;
 
-  re.pairhmm.i.x         <= read_delay when rs.feedback_rd_en1 = '0' else rs.pe_first.x;
+  re.pairhmm.i.x         <= read_delay when rs.feedback_rd_en2 = '0' else rs.pe_first.x;
   re.pairhmm.i.ybus.data <= ybus_data_delay;
 
   -- Schedule
@@ -1498,7 +1514,7 @@ begin
 
   -- Data for Y bus
   ybus_data_sel : for J in 0 to PE_DEPTH - 1 generate
-    ybus_data_delay_n(J) <= hapldelay(PE_DEPTH - J - 1) when rs.ybus_addr1 < rs.leny else BP_STOP;  -- TODO Laurens: removed +1 because ybus.data needed 1 more column
+    ybus_data_delay_n(J) <= hapldelay(PE_DEPTH - J - 1) when rs.ybus_addr1 < rs.leny else BP_STOP;
   end generate;
 
   process(re.clk_kernel)
@@ -1825,6 +1841,7 @@ begin
     vs.core_schedule1  := rs.core_schedule;
     vs.core_schedule2  := rs.core_schedule1;
     vs.feedback_rd_en1 := rs.feedback_rd_en;
+    vs.feedback_rd_en2 := rs.feedback_rd_en1;
     vs.ybus_en1        := rs.ybus_en;
     vs.ybus_en2        := rs.ybus_en1;
     vs.cell1           := rs.cell;
@@ -1873,6 +1890,8 @@ begin
         vs.feedback_rd_en := '0';
         vs.feedback_wr_en := '0';
         vs.feedback_rst   := '1';
+
+        vs.haplfifo_reset := '0';
 
         vs.shift_read_buffer := '0';
         vs.shift_prob_buffer := '0';
@@ -1983,7 +2002,7 @@ begin
           end if;
 
           -- Enable feedback FIFO reading when we passed the number of padded bases the first time
-          if rs.cycle = rs.sizexp - 1 and rs.cell /= PE_LAST then
+          if rs.cycle1 = rs.sizexp - 1 and rs.cell /= PE_LAST then
             vs.feedback_rd_en := '1';
           end if;
         end if;
@@ -1993,7 +2012,16 @@ begin
         vs.feedback_rd_en := '0';
         vs.feedback_wr_en := '0';
         vs.feedback_rst   := '1';
-        vs.state          := SCHED_IDLE;
+
+        -- Reset haplo FIFO
+        vs.haplfifo_reset := '1';
+
+        -- Reset the read/haplotype counters
+        vs.read_delay_rst := '1';
+        vs.hapl_delay_rst := '1';
+        vs.prob_delay_rst := '1';
+
+        vs.state := SCHED_IDLE;
 
       when others =>
         null;
@@ -2008,18 +2036,18 @@ begin
   begin
     if rising_edge(re.clk_kernel) then
       if reset = '1' then
-          rs.state          <= SCHED_IDLE;
-          rs.cycle          <= (others => '0');
-          rs.pe_first       <= pe_in_empty;
-          rs.basepair       <= (others => '0');
-          rs.schedule       <= (others => '0');
-          rs.valid          <= '0';
-          rs.cell           <= PE_NORMAL;
-          rs.pairhmm_rst    <= '1';
-          rs.feedback_rd_en <= '0';
-          rs.feedback_wr_en <= '0';
-          rs.feedback_rst   <= '1';
-          rs.ybus_en        <= '0';
+        rs.state          <= SCHED_IDLE;
+        rs.cycle          <= (others => '0');
+        rs.pe_first       <= pe_in_empty;
+        rs.basepair       <= (others => '0');
+        rs.schedule       <= (others => '0');
+        rs.valid          <= '0';
+        rs.cell           <= PE_NORMAL;
+        rs.pairhmm_rst    <= '1';
+        rs.feedback_rd_en <= '0';
+        rs.feedback_wr_en <= '0';
+        rs.feedback_rst   <= '1';
+        rs.ybus_en        <= '0';
       else
         rs <= qs;
       end if;

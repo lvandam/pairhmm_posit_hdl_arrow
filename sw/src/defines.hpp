@@ -53,7 +53,7 @@ using namespace sw::unum;
 
 struct Entry {
     string name;
-    cpp_dec_float_50 value;
+    cpp_dec_float_100 value;
 };
 
 struct find_entry {

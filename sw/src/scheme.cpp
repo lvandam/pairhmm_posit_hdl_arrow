@@ -33,6 +33,7 @@ shared_ptr<arrow::Table> create_table_hapl(std::vector<t_batch>& batches)
             for(t_bbase base : haplos) {
                     hapl_string += base.base;
             }
+            cout << "BUILDING Y: " << hapl_string << endl;
             hapl_str_builder.Append(hapl_string);
         }
 
@@ -69,6 +70,7 @@ shared_ptr<arrow::Table> create_table_reads_reads(std::vector<t_batch>& batches)
             for(t_bbase base : reads) {
                     read_string += base.base;
             }
+            cout << "BUILDING X: " << read_string << endl;
             read_str_builder.Append(read_string);
         }
 

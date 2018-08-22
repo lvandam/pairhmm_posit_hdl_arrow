@@ -19,26 +19,26 @@
 
 using namespace std;
 using namespace sw::unum;
-using boost::multiprecision::cpp_dec_float_50;
+using boost::multiprecision::cpp_dec_float_100;
 
-cpp_dec_float_50 decimal_accuracy(cpp_dec_float_50 exact, cpp_dec_float_50 computed) {
+cpp_dec_float_100 decimal_accuracy(cpp_dec_float_100 exact, cpp_dec_float_100 computed) {
         if (boost::math::isnan(exact) || boost::math::isnan(computed) ||
             (boost::math::sign(exact) != boost::math::sign(computed))) {
-                return std::numeric_limits<cpp_dec_float_50>::quiet_NaN();
+                return std::numeric_limits<cpp_dec_float_100>::quiet_NaN();
         } else if (exact == computed) {
-                return std::numeric_limits<cpp_dec_float_50>::infinity();
-        } else if ((exact == std::numeric_limits<cpp_dec_float_50>::infinity() &&
-                    computed != std::numeric_limits<cpp_dec_float_50>::infinity()) ||
-                   (exact != std::numeric_limits<cpp_dec_float_50>::infinity() &&
-                    computed == std::numeric_limits<cpp_dec_float_50>::infinity()) || (exact == 0 && computed != 0) ||
+                return std::numeric_limits<cpp_dec_float_100>::infinity();
+        } else if ((exact == std::numeric_limits<cpp_dec_float_100>::infinity() &&
+                    computed != std::numeric_limits<cpp_dec_float_100>::infinity()) ||
+                   (exact != std::numeric_limits<cpp_dec_float_100>::infinity() &&
+                    computed == std::numeric_limits<cpp_dec_float_100>::infinity()) || (exact == 0 && computed != 0) ||
                    (exact != 0 && computed == 0)) {
-                return -std::numeric_limits<cpp_dec_float_50>::infinity();
+                return -std::numeric_limits<cpp_dec_float_100>::infinity();
         } else {
                 return -log10(abs(log10(computed / exact)));
         }
 }
 
-void writeBenchmark(PairHMMFloat<cpp_dec_float_50> &pairhmm_dec50, PairHMMFloat<float> &pairhmm_float,
+void writeBenchmark(PairHMMFloat<cpp_dec_float_100> &pairhmm_dec50, PairHMMFloat<float> &pairhmm_float,
                     PairHMMPosit &pairhmm_posit, DebugValues<posit<NBITS, ES> > &hw_debug_values, std::string filename,
                     bool printDate, bool overwrite) {
         time_t t = chrono::system_clock::to_time_t(chrono::system_clock::now());
@@ -55,8 +55,8 @@ void writeBenchmark(PairHMMFloat<cpp_dec_float_50> &pairhmm_dec50, PairHMMFloat<
         outfile << "name,dE_f,dE_p,dE_hw,log(abs(dE_f)),log(abs(dE_p)),log(abs(dE_hw)),E,E_f,E_p,E_hw,da_F,da_P,da_HW"
                 << endl;
         for (int i = 0; i < dec_values.size(); i++) {
-                cpp_dec_float_50 E, E_f, E_p, E_hw, dE_f, dE_p, dE_hw;
-                cpp_dec_float_50 da_F, da_P, da_HW; // decimal accuracies
+                cpp_dec_float_100 E, E_f, E_p, E_hw, dE_f, dE_p, dE_hw;
+                cpp_dec_float_100 da_F, da_P, da_HW; // decimal accuracies
 
                 string name = dec_values[i].name;
                 E = dec_values[i].value;
@@ -89,11 +89,11 @@ void writeBenchmark(PairHMMFloat<cpp_dec_float_50> &pairhmm_dec50, PairHMMFloat<
                 }
 
                 // Relative error values
-                outfile << setprecision(50) << fixed << name << ","
-                        << dE_f << "," << dE_p << "," << dE_hw << ","
-                        << log10(abs(dE_f)) << "," << log10(abs(dE_p)) << "," << log10(abs(dE_hw)) << ","
-                        << E << "," << E_f << "," << E_p << "," << E_hw << ","
-                        << da_F << "," << da_P << "," << da_HW << endl;
+                outfile << name << ",";
+                outfile << setprecision(100) << fixed << dE_f << "," << dE_p << "," << dE_hw << "," << flush;
+                outfile << setprecision(100) << fixed << log10(abs(dE_f)) << "," << log10(abs(dE_p)) << "," << log10(abs(dE_hw)) << "," << flush;
+                outfile << setprecision(100) << fixed << E << "," << E_f << "," << E_p << "," << E_hw << "," << flush;
+                outfile << setprecision(100) << fixed << da_F << "," << da_P << "," << da_HW << endl << flush;
         }
         outfile.close();
 }
@@ -203,4 +203,18 @@ void copyProbBytes(t_probs& probs, uint8_t bytesArray[]) {
 int roundToMultiple(int toRound, int multiple) {
     toRound += multiple / 2;
     return toRound - (toRound%multiple);
+}
+
+// From: https://stackoverflow.com/questions/440133/how-do-i-create-a-random-alpha-numeric-string-in-c
+std::string randomBasepairs(int len) {
+    auto randchar = []() -> char
+    {
+        const char charset[] = "ACTG";
+        const size_t max_index = sizeof(charset) - 1;
+        return charset[rand() % max_index];
+    };
+    std::string str(len, 0);
+    std::generate_n(str.begin(), len, randchar);
+
+    return str;
 }

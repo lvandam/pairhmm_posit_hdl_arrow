@@ -4,8 +4,7 @@ project(pairhmm)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -g -fext-numeric-literals -DPOSIT_VERBOSE_OUTPUT")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG=1 ")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -fext-numeric-literals")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 set(EXTERNAL_INSTALL_LOCATION ${CMAKE_BINARY_DIR}/external)
@@ -28,13 +27,6 @@ file(GLOB pairhmm_SRC
         "src/*.cpp"
         )
 
-#add_executable(pairhmm
-#    utils.cpp
-#    batch.cpp
-#    scheme.cpp
-#	pairhmm.cpp
-#	PairHMMUserCore.cpp
-#)
 add_executable(pairhmm ${pairhmm_SRC})
 add_dependencies(pairhmm universal)
 
@@ -48,58 +40,27 @@ if (OPENMP_FOUND)
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 
-option(ACTIVE_UNITS "Number of active Pair-HMM units in the FPGA implementation" 16)
-option(RUNTIME_PLATFORM "The run-time platform to use. Currently 0: ECHO, 1: AWS EC2 F1, 2: CAPI SNAP" 0)
+option(RUNTIME_PLATFORM "The run-time platform to use. Currently 2: CAPI SNAP" 2)
 
-# ECHO
-if (${RUNTIME_PLATFORM} EQUAL 0)
-  message("You used the Echo FPGA platform to build this example. Use CMake with -DRUNTIME_PLATFORM=<num> where for num=0 > Echo, num=1 > AWS EC2 F1, num=2 > CAPI SNAP")
+message("Chose CAPI SNAP as run-time platform.")
+
+if(NOT EXISTS "$ENV{SNAP_ROOT}")
+message(FATAL_ERROR "Attempting to CMake with SNAP support, but SNAP_ROOT is not set. Please do something to fix that.")
 endif()
 
-# AWS
-if (${RUNTIME_PLATFORM} EQUAL 1)
-  set(DEF_ACTIVE_UNITS 16)
-  message("Chose AWS EC2 F1 as run-time platform.")
-  if(NOT EXISTS "$ENV{SDK_DIR}")
-    message(FATAL_ERROR "Attempting to CMake with AWS EC2 F1 support, but SDK_DIR is not set. Please source the sdk_setup.sh script first.")
-  endif()
+set(PLATFORM_INCLUDE_DIRS ${PLATFORM_INCLUDE_DIRS} $ENV{SNAP_ROOT}/software/include)
 
-  find_library(LIB_AWS_FPGA_MGMT fpga_mgmt)
-  message(STATUS "AWS EC2 F1 libfpga_mgmt.so at: " ${LIB_AWS_FPGA_MGMT})
-  set(LIB_PLATFORM ${LIB_AWS_FPGA_MGMT})
-endif()
+find_library(LIB_SNAP snap HINTS $ENV{SNAP_ROOT}/software/lib)
+message(STATUS "SNAP libsnap.so at: " ${LIB_SNAP})
+set(LIB_PLATFORM ${LIB_SNAP})
 
-# SNAP
-if (${RUNTIME_PLATFORM} EQUAL 2)
-  set(DEF_ACTIVE_UNITS 8)
-
-  message("Chose CAPI SNAP as run-time platform.")
-
-  if(NOT EXISTS "$ENV{SNAP_ROOT}")
-    message(FATAL_ERROR "Attempting to CMake with SNAP support, but SNAP_ROOT is not set. Please do something to fix that.")
-  endif()
-
-  set(PLATFORM_INCLUDE_DIRS ${PLATFORM_INCLUDE_DIRS} $ENV{SNAP_ROOT}/software/include)
-
-  find_library(LIB_SNAP snap HINTS $ENV{SNAP_ROOT}/software/lib)
-  message(STATUS "SNAP libsnap.so at: " ${LIB_SNAP})
-  set(LIB_PLATFORM ${LIB_SNAP})
-endif()
-
-option(ENABLE_DEBUG "Enable debugging" ON)
+option(ENABLE_DEBUG "Enable debugging" OFF)
 
 if (ENABLE_DEBUG)
     message(STATUS "DEBUG ON")
   target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG)
 endif()
 
-option(ACTIVE_UNITS "Number of active Pair-HMM units in the FPGA implementation" 16)
-
-if (ACTIVE_UNITS)
-  set(DEF_ACTIVE_UNITS ${ACTIVE_UNITS})
-endif()
-
-target_compile_definitions(${PROJECT_NAME} PRIVATE REUC_ACTIVE_UNITS=${DEF_ACTIVE_UNITS})
 target_compile_definitions(${PROJECT_NAME} PRIVATE PLATFORM=${RUNTIME_PLATFORM})
 
 target_link_libraries(${PROJECT_NAME}

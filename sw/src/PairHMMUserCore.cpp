@@ -54,9 +54,13 @@ void PairHMMUserCore::set_batch_offsets(std::vector<uint32_t>& offsets) {
         }
 }
 
-void PairHMMUserCore::set_batch_init(std::vector<t_inits>& init, std::vector<uint32_t>& xlen, std::vector<uint32_t>& ylen) {
+void PairHMMUserCore::set_batch_init(std::vector<uint32_t>& batch_length, std::vector<t_inits>& init, std::vector<uint32_t>& xlen, std::vector<uint32_t>& ylen) {
     for (int i = 0; i < (int)ceil((float)CORES / 2); i++) {
         reg_conv_t reg;
+
+        reg.half.hi = batch_length[2 * i];
+        reg.half.lo = batch_length[2 * i + 1];
+        this->platform()->write_mmio(REG_BATCHES_OFFSET + i, reg.full);
 
         reg.half.hi = xlen[2 * i];
         reg.half.lo = xlen[2 * i + 1];

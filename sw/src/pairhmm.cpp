@@ -38,11 +38,7 @@
 #include "batch.hpp"
 
 #ifndef PLATFORM
-  #define PLATFORM 0
-#endif
-
-#ifndef DEBUG
-    #define DEBUG 1
+  #define PLATFORM 2
 #endif
 
 /* Burst step length in bytes */
@@ -68,6 +64,10 @@ addr_lohi;
  */
 int main(int argc, char ** argv)
 {
+        // Times
+        double start, stop;
+        double t_fill_batch, t_fill_table, t_prepare_column, t_create_core, t_fpga, t_sw, t_float, t_dec = 0.0;
+
         srand(0);
         flush(cout);
 
@@ -75,7 +75,6 @@ int main(int argc, char ** argv)
         std::vector<t_batch> batches;
 
         int rc = 0;
-        uint32_t num_rows = BATCHES_PER_CORE * PIPE_DEPTH;
 
         unsigned long pairs, x, y = 0;
         int initial_constant_power = 1;
@@ -84,169 +83,235 @@ int main(int argc, char ** argv)
         bool show_table = false;
 
         DEBUG_PRINT("Parsing input arguments...\n");
-        if (argc < 5) {
-                fprintf(stderr,
-                        "ERROR: Correct usage is: %s <-m = manual> ... \n-m: <pairs> <X> <Y> <initial constant power> ... \n-f: <input file>\n... <sw solve?*> <show results?*> <show MID table?*> (* is optional)\n",
-                        "pairhmm");
-                return (-1);
+        if (argc > 4) {
+                pairs = strtoul(argv[1], NULL, 0);
+                x = strtoul(argv[2], NULL, 0);
+                y = strtoul(argv[3], NULL, 0);
+                initial_constant_power = strtoul(argv[4], NULL, 0);
+
+                workload = gen_workload(pairs, x, y);
+
+                BENCH_PRINT("M, ");
+                BENCH_PRINT("%8d, %8d, %8d, ", workload->pairs, x, y);
         } else {
-                if (strncmp(argv[1], "-m", 2) == 0) {
-                        DEBUG_PRINT("Manual input mode selected. %d arguments supplied.\n", argc);
-                        pairs = strtoul(argv[2], NULL, 0);
-                        x = strtoul(argv[3], NULL, 0);
-                        y = strtoul(argv[4], NULL, 0);
-                        initial_constant_power = strtoul(argv[5], NULL, 0);
-
-                        workload = gen_workload(pairs, x, y);
-
-                        if (argc >= 7) istringstream(argv[6]) >> calculate_sw;
-                        if (argc >= 8) istringstream(argv[7]) >> show_results;
-                        if (argc >= 9) istringstream(argv[8]) >> show_table;
-
-                        BENCH_PRINT("M, ");
-                        BENCH_PRINT("%8d, %8d, %8d, ", workload->pairs, x, y);
-                } else {
-                        fprintf(stderr,
-                                "ERROR: Correct usage is: %s <-m = manual> ... \n-m: <pairs> <X> <Y> <initial constant power> ... \n-f: <input file>\n... <sw solve?*> <show results?*> <show MID table?*> (* is optional)\n",
-                                "pairhmm");
-                        return (EXIT_FAILURE);
-                }
+                fprintf(stderr,
+                        "ERROR: Correct usage is: %s <pairs> <X> <Y> <initial constant power>\n",
+                        "pairhmm");
+                return (EXIT_FAILURE);
         }
 
         batches = std::vector<t_batch>(workload->batches);
+        start = omp_get_wtime();
+
+        // Generate random basepair strings for reads and haplotypes
+        std::string x_string = randomBasepairs(workload->batches * (px(x, y) + x - 1));
+        std::string y_string = randomBasepairs(workload->batches * (py(y) + y - 1));
+
+        cout << "X_FULL = " << x_string << endl;
+        cout << "Y_FULL = " << y_string << endl;
+
+
         for (int q = 0; q < workload->batches; q++) {
-                fill_batch(batches[q], q, workload->bx[q], workload->by[q], powf(2.0, initial_constant_power)); // HW unit starts with last batch
-                print_batch_info(batches[q]);
+                fill_batch(batches[q], x_string, y_string, q, workload->bx[q], workload->by[q], powf(2.0, initial_constant_power)); // HW unit starts with last batch
+                // print_batch_info(batches[q]);
+
+                cout << "BATCH " << q << endl;
+                cout << "X = " << x_string.substr(q * (px(x, y) + x - 1), (q + 1) * (px(x, y) + x - 1)) << endl;
+                cout << "Y = " << y_string.substr(q * (py(y) + y - 1), (q + 1) * (py(y) + y - 1)) << endl;
+                cout << endl;
         }
+        stop = omp_get_wtime();
+        t_fill_batch = stop - start;
 
         PairHMMPosit pairhmm_posit(workload, show_results, show_table);
         PairHMMFloat<float> pairhmm_float(workload, show_results, show_table);
-        PairHMMFloat<cpp_dec_float_50> pairhmm_dec50(workload, show_results, show_table);
+        PairHMMFloat<cpp_dec_float_100> pairhmm_dec50(workload, show_results, show_table);
 
         if (calculate_sw) {
                 DEBUG_PRINT("Calculating on host...\n");
+
+                start = omp_get_wtime();
                 pairhmm_posit.calculate(batches);
+                stop = omp_get_wtime();
+                t_sw = stop - start;
+
+                start = omp_get_wtime();
                 pairhmm_float.calculate(batches);
+                stop = omp_get_wtime();
+                t_float = stop - start;
+
+                start = omp_get_wtime();
                 pairhmm_dec50.calculate(batches);
+                stop = omp_get_wtime();
+                t_dec = stop - start;
         }
 
+        DEBUG_PRINT("Creating Arrow table...\n");
+        start = omp_get_wtime();
         // Make a table with haplotypes
         shared_ptr<arrow::Table> table_hapl = create_table_hapl(batches);
         // Create the read and probabilities columns
         shared_ptr<arrow::Table> table_reads_reads = create_table_reads_reads(batches);
         shared_ptr<arrow::Table> table_reads_probs = create_table_reads_probs(batches);
+        stop = omp_get_wtime();
+        t_fill_table = stop - start;
 
         // Calculate on FPGA
         // Create a platform
-#if (PLATFORM == 0)
-        shared_ptr<fletcher::EchoPlatform> platform(new fletcher::EchoPlatform());
-#elif (PLATFORM == 2)
         shared_ptr<fletcher::SNAPPlatform> platform(new fletcher::SNAPPlatform());
-#else
-#error "PLATFORM must be 0 or 2"
-#endif
 
+        DEBUG_PRINT("Preparing column buffers...\n");
         // Prepare the colummn buffers
+        start = omp_get_wtime();
         std::vector<std::shared_ptr<arrow::Column> > columns;
         columns.push_back(table_hapl->column(0));
         columns.push_back(table_reads_reads->column(0));
         columns.push_back(table_reads_probs->column(0));
-
         platform->prepare_column_chunks(columns); // This requires a modification in Fletcher (to accept vectors)
+        stop = omp_get_wtime();
+        t_prepare_column = stop - start;
 
+        DEBUG_PRINT("Creating UserCore instance...\n");
+        start = omp_get_wtime();
         // Create a UserCore
         PairHMMUserCore uc(static_pointer_cast<fletcher::FPGAPlatform>(platform));
 
         // Reset UserCore
         uc.reset();
 
+        // Initial values for each core
+        std::vector<t_inits> inits(roundToMultiple(CORES, 2));
+        // Number of batches for each core
+        std::vector<uint32_t> batch_length(roundToMultiple(CORES, 2));
+        // X & Y length for each core
+        std::vector<uint32_t> x_len(roundToMultiple(CORES, 2));
+        std::vector<uint32_t> y_len(roundToMultiple(CORES, 2));
+
+        int batch_length_total = 0;
+        // Balance total batches over multiple cores
+        int avg_batches_per_core = floor((float)workload->batches / CORES);
+
+        for(int i = 0; i < roundToMultiple(CORES, 2); i++) {
+                // For now, duplicate batch information across all core MMIO registers
+                batch_length[i] = (i == 0 && workload->batches % avg_batches_per_core > 0) ? avg_batches_per_core + 1 : avg_batches_per_core; // Remainder of batches is done by first core
+                inits[i] = (i > CORES - 1) ? batches[0].init : batches[i].init;
+                x_len[i] = (i > CORES - 1) ? 0 : workload->by[i];
+                y_len[i] = (i > CORES - 1) ? 0 : workload->by[i];
+        }
+
         // Write result buffer addresses
         // Create arrays for results to be written to (per SA core)
         std::vector<uint32_t *> result_hw(roundToMultiple(CORES, 2));
         for(int i = 0; i < roundToMultiple(CORES, 2); i++) {
-                rc = posix_memalign((void * * ) &(result_hw[i]), BURST_LENGTH, sizeof(uint32_t) * num_rows);
+                rc = posix_memalign((void * * ) &(result_hw[i]), BURST_LENGTH, sizeof(uint32_t) * roundToMultiple(batch_length[i], 2) * PIPE_DEPTH);
                 // clear values buffer
-                for (uint32_t j = 0; j < num_rows; j++) {
+                for (uint32_t j = 0; j < roundToMultiple(batch_length[i], 2) * PIPE_DEPTH; j++) {
                         result_hw[i][j] = 0xDEADBEEF;
                 }
 
                 addr_lohi val;
                 val.full = (uint64_t) result_hw[i];
-                printf("Values buffer @ %016lX\n", val.full);
                 platform->write_mmio(REG_RESULT_DATA_OFFSET + i, val.full);
         }
+        stop = omp_get_wtime();
+        t_create_core = stop - start;
 
         // Configure the pair HMM SA cores
-        std::vector<t_inits> inits(roundToMultiple(CORES, 2));
-        std::vector<uint32_t> x_len(roundToMultiple(CORES, 2)), y_len(roundToMultiple(CORES, 2));
-        for(int i = 0; i < roundToMultiple(CORES, 2); i++) {
-                // For now, duplicate batch information across all core MMIO registers
-                inits[i] = batches[0].init;
-                x_len[i] = workload->by[0];
-                y_len[i] = workload->by[0];
-        }
-
-        uc.set_batch_init(inits, x_len, y_len);
+        uc.set_batch_init(batch_length, inits, x_len, y_len);
 
         std::vector<uint32_t> batch_offsets;
-        batch_offsets.reserve(roundToMultiple(CORES, 2));
+        batch_offsets.resize(roundToMultiple(CORES, 2));
+        int batch_counter = 0;
         for(int i = 0; i < roundToMultiple(CORES, 2); i++) {
-                // For now, same amount of batches for all cores
-                batch_offsets[i] = i * BATCHES_PER_CORE;
+            batch_offsets[i] = batch_counter;
+            batch_counter = batch_counter + batch_length[i];
         }
         uc.set_batch_offsets(batch_offsets);
 
         // Run
+        DEBUG_PRINT("Starting accelerator computation...\n");
+        start = omp_get_wtime();
         uc.start();
 
-#ifdef DEBUG
-        uc.wait_for_finish(1000000);
-#else
-        uc.wait_for_finish(10);
-#endif
+// #ifdef DEBUG
+//         uc.wait_for_finish(1000000);
+// #else
+        uc.wait_for_finish();
+// #endif
 
         // Wait for last result of last SA core
         do {
-            usleep(10);
+            // for(int i = 0; i < CORES; i++) {
+            //         cout << "==================================" << endl;
+            //         cout << "== CORE " << i << endl;
+            //         cout << "==================================" << endl;
+            //         for(int j = 0; j < batch_length[i] * PIPE_DEPTH; j++) {
+            //                 cout << dec << j <<": " << hex << result_hw[i][j] << dec <<endl;
+            //         }
+            //         cout << "==================================" << endl;
+            //         cout << endl;
+            // }
+
+            usleep(1);
         }
-        while ((result_hw[CORES - 1][num_rows - 1] == 0xDEADBEEF));
+        while ((result_hw[CORES - 1][batch_length[CORES - 1] * PIPE_DEPTH - 1] == 0xDEADBEEF));
+        stop = omp_get_wtime();
+        t_fpga = stop - start;
 
         for(int i = 0; i < CORES; i++) {
                 cout << "==================================" << endl;
                 cout << "== CORE " << i << endl;
                 cout << "==================================" << endl;
-                for(int j = 0; j < num_rows; j++) {
+                for(int j = 0; j < batch_length[i] * PIPE_DEPTH; j++) {
                         cout << dec << j <<": " << hex << result_hw[i][j] << dec <<endl;
                 }
                 cout << "==================================" << endl;
                 cout << endl;
         }
 
+
         // Check for errors with SW calculation
         if (calculate_sw) {
                 DebugValues<posit<NBITS, ES> > hw_debug_values;
 
                 for (int c = 0; c < CORES; c++) {
-                        for (int i = 0; i < BATCHES_PER_CORE; i++) {
+                        for (int i = 0; i < batch_length[c]; i++) {
                                 for(int j = 0; j < PIPE_DEPTH; j++) {
                                         // Store HW posit result for decimal accuracy calculation
                                         posit<NBITS, ES> res_hw;
                                         res_hw.set_raw_bits(result_hw[c][i * PIPE_DEPTH + j]);
-                                        hw_debug_values.debugValue(res_hw, "result[%d][%d]", c * BATCHES_PER_CORE + (BATCHES_PER_CORE - i - 1), j);
+                                        hw_debug_values.debugValue(res_hw, "result[%d][%d]", batch_offsets[c] + (batch_length[c] - i - 1), j);
                                 }
                         }
                 }
 
+                cout << "Writing benchmark file..." << endl;
                 writeBenchmark(pairhmm_dec50, pairhmm_float, pairhmm_posit, hw_debug_values,
-                               std::to_string(initial_constant_power) + ".txt", false, true);
+                               "pairhmm_es" + std::to_string(ES) + "_" + std::to_string(CORES) + "core_" + std::to_string(pairs) + "_" + std::to_string(x) + "_" + std::to_string(y) + "_" + std::to_string(initial_constant_power) + ".txt",
+                                false, true);
 
+                DEBUG_PRINT("Checking errors...\n");
                 int errs_posit = 0;
-                errs_posit = pairhmm_posit.count_errors(result_hw);
+                errs_posit = pairhmm_posit.count_errors(batch_offsets, batch_length, result_hw);
                 DEBUG_PRINT("Posit errors: %d\n", errs_posit);
         }
 
+        cout << "Resetting user core..." << endl;
         // Reset UserCore
         uc.reset();
+
+        cout << "Adding timing data..." << endl;
+        time_t t = chrono::system_clock::to_time_t(chrono::system_clock::now());
+        ofstream outfile("pairhmm_es" + std::to_string(ES) + "_" + std::to_string(CORES) + "core_" + std::to_string(pairs) + "_" + std::to_string(x) + "_" + std::to_string(y) + "_" + std::to_string(initial_constant_power) + ".txt", ios::out | ios::app);
+        outfile << endl << "===================" << endl;
+        outfile << ctime(&t) << endl;
+        outfile << "Pairs = " << pairs << endl;
+        outfile << "X = " << x << endl;
+        outfile << "Y = " << y << endl;
+        outfile << "Initial Constant = " << initial_constant_power << endl;
+        outfile << "t_fill_batch,t_fill_table,t_prepare_column,t_create_core,t_fpga,t_sw,t_float,t_dec" << endl;
+        outfile << setprecision(20) << fixed << t_fill_batch <<","<< t_fill_table <<","<< t_prepare_column <<","<< t_create_core <<","<< t_fpga <<","<< t_sw <<","<< t_float <<","<< t_dec << endl;
+        outfile.close();
 
         return 0;
 }

@@ -65,6 +65,7 @@ package cu_snap_package is
     LOAD_IDLE,
     LOAD_RESET_START,
     LOAD_LOAD_INIT,
+    LOAD_RESET_FIFO,
     LOAD_REQUEST_DATA,
     LOAD_LOADX_LOADY,
     LOAD_LOADNEXTINIT,
@@ -127,9 +128,9 @@ package cu_snap_package is
     valid, valid1 : std_logic;          -- Valid bit for the PairHMM core
     cell, cell1   : pe_cell_type;  -- State of the cell for this bunch of data
 
-    feedback_rd_en, feedback_rd_en1 : std_logic;  -- Read enable for the feedback FIFO
-    feedback_wr_en                  : std_logic;  -- Write enable for the feedback FIFO
-    feedback_rst                    : std_logic;  -- Feedback FIFO reset
+    feedback_rd_en, feedback_rd_en1, feedback_rd_en2 : std_logic;  -- Read enable for the feedback FIFO
+    feedback_wr_en                                   : std_logic;  -- Write enable for the feedback FIFO
+    feedback_rst                                     : std_logic;  -- Feedback FIFO reset
 
     leny, leny_init : unsigned(log2e(PAIRHMM_MAX_SIZE) downto 0);
     sizey           : unsigned(log2e(PAIRHMM_MAX_SIZE) downto 0);  -- To keep track of howmany bp's each pair still has to process in y direction
@@ -149,6 +150,8 @@ package cu_snap_package is
     shift_read_buffer : std_logic;
     shift_hapl_buffer : std_logic;
     shift_prob_buffer : std_logic;
+
+    haplfifo_reset : std_logic;
 
     read_delay_rst : std_logic;
     hapl_delay_rst : std_logic;
@@ -171,6 +174,7 @@ package cu_snap_package is
     pairhmm_rst       => '1',
     feedback_rd_en    => '0',
     feedback_rd_en1   => '0',
+    feedback_rd_en2   => '0',
     feedback_wr_en    => '0',
     feedback_rst      => '1',
     leny              => (others => '0'),
@@ -193,6 +197,7 @@ package cu_snap_package is
     shift_read_buffer => '0',
     shift_hapl_buffer => '0',
     shift_prob_buffer => '0',
+    haplfifo_reset    => '0',
     read_delay_rst    => '0',
     hapl_delay_rst    => '0',
     prob_delay_rst    => '0'

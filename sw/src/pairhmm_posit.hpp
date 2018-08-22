@@ -35,7 +35,7 @@ public:
         result_sw.resize(workload->batches * (PIPE_DEPTH + 1));
         result_sw_m.resize(workload->batches * (PIPE_DEPTH + 1));
         result_sw_i.resize(workload->batches * (PIPE_DEPTH + 1));
-        for (int i = 0; i < workload->batches * (PIPE_DEPTH + 1); i++) {
+        for(int i = 0; i < workload->batches * (PIPE_DEPTH + 1); i++) {
             result_sw[i] = t_result_sw(3, 0);
             result_sw_m[i] = t_result_sw(3, 0);
             result_sw_i[i] = t_result_sw(3, 0);
@@ -43,7 +43,7 @@ public:
     }
 
     void calculate(std::vector<t_batch>& batches) {
-        for (int i = 0; i < workload->batches; i++) {
+        for(int i = 0; i < workload->batches; i++) {
             int x = workload->bx[i];
             int y = workload->by[i];
 
@@ -52,18 +52,28 @@ public:
             t_matrix D(x + 1, vector<posit<NBITS, ES>>(y + 1));
 
             // Calculate results
-            for (int j = 0; j < PIPE_DEPTH; j++) {
+            for(int j = 0; j < PIPE_DEPTH; j++) {
                 calculate_mids(batches[i], j, x, y, M, I, D);
 
                 result_sw[i * PIPE_DEPTH + j][0] = 0.0;
                 result_sw_m[i * PIPE_DEPTH + j][0] = 0.0;
                 result_sw_i[i * PIPE_DEPTH + j][0] = 0.0;
-                for (int c = 1; c < y + 1; c++) {
+                for(int c = 1; c < y + 1; c++) {
                     result_sw_m[i * PIPE_DEPTH + j][0] += M[x][c];
+                    // if(i*PIPE_DEPTH+j == 0) {
+                    //     cout << "+= " << hexstring(M[x][c].collect()) << " --> " << hexstring(result_sw_m[i * PIPE_DEPTH + j][0].collect()) << endl;
+                    // }
+
                     result_sw_i[i * PIPE_DEPTH + j][0] += I[x][c];
+                    // if(i*PIPE_DEPTH+j == 0) {
+                    //     cout << "+= " << hexstring(I[x][c].collect()) << " --> " << hexstring(result_sw_i[i * PIPE_DEPTH + j][0].collect()) << endl;
+                    // }
                 }
 
                 result_sw[i * PIPE_DEPTH + j][0] = result_sw_m[i * PIPE_DEPTH + j][0] + result_sw_i[i * PIPE_DEPTH + j][0];
+                // if(i*PIPE_DEPTH+j == 0) {
+                //     cout << "result_sw = " << hexstring(result_sw_m[i * PIPE_DEPTH + j][0].collect()) <<"+"<< hexstring(result_sw_i[i * PIPE_DEPTH + j][0].collect()) << " --> " << hexstring(result_sw[i * PIPE_DEPTH + j][0].collect()) << endl;
+                // }
 
                 debug_values.debugValue(result_sw[i * PIPE_DEPTH + j][0], "result[%d][%d]", i, j);
 
@@ -79,27 +89,28 @@ public:
     }
 
     void calculate_mids(t_batch& batch, int pair, int x, int y, t_matrix& M, t_matrix& I, t_matrix& D) {
+
         t_inits& init = batch.init;
         std::vector<t_bbase>& read = batch.read;
         std::vector<t_bbase>& hapl = batch.hapl;
         std::vector<t_probs>& prob = batch.prob;
 
         // Set to zero and intial value in the X direction
-        for (int j = 0; j < x + 1; j++) {
+        for(int j = 0; j < x + 1; j++) {
             M[0][j] = 0.0;
             I[0][j] = 0.0;
             D[0][j].set_raw_bits(init.initials[pair]);
         }
 
         // Set to zero in Y direction
-        for (int i = 1; i < y + 1; i++) {
+        for(int i = 1; i < y + 1; i++) {
             M[i][0] = 0.0;
             I[i][0] = 0.0;
             D[i][0] = 0.0;
         }
 
         posit<NBITS, ES> distm_simi, distm_diff, alpha, beta, delta, epsilon, zeta, eta, distm;
-        for (int i = 1; i < x + 1; i++) {
+        for(int i = 1; i < x + 1; i++) {
             unsigned char rb = read[i - 1 + pair].base;
 
             eta.set_raw_bits(prob[(i - 1) + pair].p[0].b);
@@ -122,8 +133,12 @@ public:
             //     cout << "distm_simi: " << hexstring(distm_simi.collect()) << endl;
             // }
 
-            for (int j = 1; j < y + 1; j++) {
+            for(int j = 1; j < y + 1; j++) {
                 unsigned char hb = hapl[j - 1 + pair].base;
+
+                // if(i == 1 && pair == 0) {
+                //     cout << rb <<" & "<< hb << endl;
+                // }
 
                 if (rb == hb || rb == 'N' || hb == 'N') {
                     distm = distm_simi;
@@ -136,31 +151,41 @@ public:
                 D[i][j] = zeta * M[i][j - 1] + eta * D[i][j - 1];
 
                 // if(i == 1 && j == 1 && pair == 0) {
-                //     cout << "almtl: " << hexstring((alpha * M[i - 1][j - 1]).collect()) << endl;
-                //     cout << "beitl: " << hexstring((beta * I[i - 1][j - 1]).collect()) << endl;
-                //     cout << "gadtl: " << hexstring((beta * D[i - 1][j - 1]).collect()) << endl;
-                //     cout << "demt: " << hexstring((delta * M[i - 1][j]).collect()) << endl;
-                //     cout << "epit: " << hexstring((epsilon * I[i - 1][j]).collect()) << endl;
-                //     cout << "etdl: " << hexstring((eta * D[i][j - 1]).collect()) << endl;
-                //
-                //     cout << "albetl: " << hexstring((alpha * M[i - 1][j - 1] + beta * I[i - 1][j - 1]).collect()) << endl;
-                //     cout << "albegatl: " << hexstring((alpha * M[i - 1][j - 1] + beta * I[i - 1][j - 1] + beta * D[i - 1][j - 1]).collect()) << endl;
-                //     cout << "deept: " << hexstring((delta * M[i - 1][j] + epsilon * I[i - 1][j]).collect()) << endl;
-                //     cout << "zeett: " << hexstring((zeta * M[i][j - 1] + eta * D[i][j - 1]).collect()) << endl;
+                    // cout << "almtl: " << hexstring((alpha * M[i - 1][j - 1]).collect()) << endl;
+                    // cout << "beitl: " << hexstring((beta * I[i - 1][j - 1]).collect()) << endl;
+                    // cout << "gadtl: " << hexstring((beta * D[i - 1][j - 1]).collect()) << endl;
+                    // cout << "demt: " << hexstring((delta * M[i - 1][j]).collect()) << endl;
+                    // cout << "epit: " << hexstring((epsilon * I[i - 1][j]).collect()) << endl;
+                    // cout << "etdl: " << hexstring((eta * D[i][j - 1]).collect()) << endl;
+                    //
+                    // cout << "albetl: " << hexstring((alpha * M[i - 1][j - 1] + beta * I[i - 1][j - 1]).collect()) << endl;
+                    // cout << "albegatl: " << hexstring((alpha * M[i - 1][j - 1] + beta * I[i - 1][j - 1] + beta * D[i - 1][j - 1]).collect()) << endl;
+                    // cout << "deept: " << hexstring((delta * M[i - 1][j] + epsilon * I[i - 1][j]).collect()) << endl;
+                    // cout << "zeett: " << hexstring((zeta * M[i][j - 1] + eta * D[i][j - 1]).collect()) << endl;
+
+                    // cout << "i = " << i << ", j = " << j << ", pair = " << pair << endl;
+                    // cout << "emult.m = albegatl * distm = " << hexstring((alpha * M[i - 1][j - 1] + beta * I[i - 1][j - 1] + beta * D[i - 1][j - 1]).collect()) << " * " << hexstring(distm.collect()) <<" = "<< hexstring(M[i][j].collect()) << endl;
+                    // cout << "emult.i: " << hexstring(I[i][j].collect()) << endl;
+                    // cout << "---------" << endl;
                 // }
             }
+
+            // if(i == 1 && pair == 0) {
+            //     cout << endl;
+            // }
         }
     } // calculate_mids
 
-    int count_errors(std::vector<uint32_t *>& hr) {
+    int count_errors(std::vector<uint32_t>& batch_offsets, std::vector<uint32_t>& batch_length, std::vector<uint32_t *>& hr) {
         int total_errors = 0;
         posit<NBITS, ES> hwp, swp;
 
-        for (int i = 0; i < workload->batches; i++) {
-            int core_index = floor((float)i / BATCHES_PER_CORE);
-            int core_batch = BATCHES_PER_CORE - i % BATCHES_PER_CORE - 1;
+        for(int i = 0; i < workload->batches; i++) {
+            int core_index = batchToCore(i, batch_offsets);
+            int core_single_batch = batch_length[core_index] == 1;
+            int core_batch = core_single_batch ? 0 : (batch_length[core_index] - batchToCoreBatch(i, batch_length) - 1);
 
-            for (int j = 0; j < PIPE_DEPTH; j++) {
+            for(int j = 0; j < PIPE_DEPTH; j++) {
                 swp = result_sw[i * PIPE_DEPTH + j][0];
                 hwp.set_raw_bits(hr[core_index][core_batch * PIPE_DEPTH + j]);
 
@@ -186,48 +211,48 @@ public:
         res[0] = static_cast<posit<NBITS, ES>>(0.0);
 
         printf("════╦");
-        for (uint32_t i = 0; i < c + 1; i++) {
+        for(uint32_t i = 0; i < c + 1; i++) {
             printf("══════════════════════════╦");
         }
         printf("\n");
         printf("    ║");
-        for (uint32_t i = 0; i < c + 1; i++) {
+        for(uint32_t i = 0; i < c + 1; i++) {
             printf("      %5d , %c           ║", i, (i > 0) ? (hapl[i - 1 + pair].base) : '-');
         }
         printf("\n");
         printf("%3d ║", pair);
-        for (uint32_t i = 0; i < c + 1; i++) {
+        for(uint32_t i = 0; i < c + 1; i++) {
             printf("══════════════════════════╣");
         }
         printf("\n");
         printf("    ║");
-        for (uint32_t i = 0; i < c + 1; i++) {
+        for(uint32_t i = 0; i < c + 1; i++) {
             printf("   M        I        D    ║");
         }
         printf("\n");
         printf("════╣");
-        for (uint32_t i = 0; i < c + 1; i++) {
+        for(uint32_t i = 0; i < c + 1; i++) {
             printf("══════════════════════════╣");
         }
         printf("\n");
 
         // loop over rows
-        for (uint32_t j = 0; j < r + 1; j++) {
+        for(uint32_t j = 0; j < r + 1; j++) {
             printf("%2d,%c║", j, (j > 0) ? (read[j - 1 + pair].base) : ('-'));
             // loop over columns
-            for (uint32_t i = 0; i < c + 1; i++) {
+            for(uint32_t i = 0; i < c + 1; i++) {
                 printf("%s %s %s║", hexstring(M[j][i].collect()).c_str(), hexstring(I[j][i].collect()).c_str(), hexstring(D[j][i].collect()).c_str());
             }
             printf("\n");
         }
         printf("════╣");
-        for (uint32_t i = 0; i < c + 1; i++) {
+        for(uint32_t i = 0; i < c + 1; i++) {
             printf("══════════════════════════╣");
         }
         printf("\n");
         // Result row
         printf("res:║");
-        for (uint32_t i = 0; i < c + 1; i++) {
+        for(uint32_t i = 0; i < c + 1; i++) {
             res[0] += M[r][i];
             res[0] += I[r][i];
 
@@ -236,7 +261,7 @@ public:
         }
         printf("\n");
         printf("═════");
-        for (uint32_t i = 0; i < c + 1; i++) {
+        for(uint32_t i = 0; i < c + 1; i++) {
             printf("═══════════════════════════");
         }
         printf("\n");
@@ -247,10 +272,10 @@ public:
         cout << "════════════════════════════ POSIT ═══════════════════════════" << endl;
         cout << "══════════════════════════════════════════════════════════════" << endl;
         cout << "╔═══════════════════════════════╗" << endl;
-        for (int i = 0; i < workload->batches; i++) {
+        for(int i = 0; i < workload->batches; i++) {
             cout << "║ RESULT FOR BATCH " << i << ":           ║       DECIMAL" << endl;
             cout << "╠═══════════════════════════════╣" << endl;
-            for (int j = 0; j < PIPE_DEPTH; j++) {
+            for(int j = 0; j < PIPE_DEPTH; j++) {
                 printf("║%2d: ", j);
                 cout << hexstring(result_sw[i * PIPE_DEPTH + j][0].collect());
                 cout << " ";

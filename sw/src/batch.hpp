@@ -59,6 +59,10 @@ typedef struct struct_batch {
     std::vector<t_probs> prob;
 } t_batch;
 
-void fill_batch(t_batch& batch, int batch_num, int x, int y, float initial);
+void fill_batch(t_batch& batch, string& x_string, string& y_string, int batch_num, int x, int y, float initial);
+
+int batchToCore(int batch, std::vector<uint32_t>& batch_offsets);
+
+int batchToCoreBatch(int batch, std::vector<uint32_t>& batch_length);
 
 #endif //__BATCH_H

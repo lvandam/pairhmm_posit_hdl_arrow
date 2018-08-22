@@ -251,6 +251,12 @@ package pe_package is
   subtype value_product is std_logic_vector(POSIT_SERIALIZED_WIDTH_PRODUCT_ES3-1 downto 0);
   constant value_product_empty : value_product := (POSIT_SERIALIZED_WIDTH_PRODUCT_ES3-1 downto 1 => '0', others => '1');
 
+  subtype value_prod_sum_sum is std_logic_vector(POSIT_SERIALIZED_WIDTH_SUM_PRODUCT_SUM_ES3-1 downto 0);
+  constant value_prod_sum_sum_empty : value_prod_sum_sum := (POSIT_SERIALIZED_WIDTH_SUM_PRODUCT_SUM_ES3-1 downto 1 => '0', others => '1');
+
+  subtype value_product_prod_sum_sum is std_logic_vector(POSIT_SERIALIZED_WIDTH_PRODUCT_SUM_PRODUCT_SUM_ES3-1 downto 0);
+  constant value_product_prod_sum_sum_empty : value_product_prod_sum_sum := (POSIT_SERIALIZED_WIDTH_PRODUCT_SUM_PRODUCT_SUM_ES3-1 downto 1 => '0', others => '1');
+
   subtype value_accum is std_logic_vector(POSIT_SERIALIZED_WIDTH_ACCUM_ES3-1 downto 0);
   constant value_accum_empty : value_accum := (POSIT_SERIALIZED_WIDTH_ACCUM_ES3-1 downto 1 => '0', others => '1');
 
@@ -365,9 +371,9 @@ package pe_package is
 
   type step_add_raw_type is record
     albetl   : value_prod_sum;
-    albegatl : value_sum;
-    deept    : value_sum;
-    zeett    : value_sum;
+    albegatl : value_prod_sum_sum;
+    deept    : value_prod_sum;
+    zeett    : value_prod_sum;
 
     tmis : transmissions_raw;
     emis : emissions_raw;
@@ -376,16 +382,16 @@ package pe_package is
 
   constant step_add_raw_empty : step_add_raw_type := (
     albetl   => value_prod_sum_empty,
-    albegatl => value_sum_empty,
-    deept    => value_sum_empty,
-    zeett    => value_sum_empty,
+    albegatl => value_prod_sum_sum_empty,
+    deept    => value_prod_sum_empty,
+    zeett    => value_prod_sum_empty,
     tmis     => tmis_raw_empty,
     emis     => emis_raw_empty,
     mids     => mids_raw_empty
     );
 
   type step_emult_raw_type is record
-    m : value_product;
+    m : value_product_prod_sum_sum;
     i : value_product;
     d : value_product;
 
@@ -395,7 +401,7 @@ package pe_package is
   end record;
 
   constant step_emult_raw_empty : step_emult_raw_type := (
-    m    => value_product_empty,
+    m    => value_product_prod_sum_sum_empty,
     i    => value_product_empty,
     d    => value_product_empty,
     tmis => tmis_raw_empty,
@@ -550,6 +556,24 @@ package body pe_package is
     assert signed(tmp(36 downto 28)) = signed(a(262 downto 254)) report "Scale loss (accum2val), val=" & integer'image(to_integer(signed(tmp(36 downto 28)))) & ", sum=" & integer'image(to_integer(signed(a(262 downto 254)))) severity error;
     return tmp;
   end function accum2val;
+
+  -- Accum layout:
+  -- 264 1       sign
+  -- 263 9       scale
+  -- 254 252     fraction
+  -- 2   1       inf
+  -- 1   1       zero
+  -- 0
+  function accum2prod (a : in value_accum) return value_product is
+    variable tmp : std_logic_vector(POSIT_SERIALIZED_WIDTH_ES3-1 downto 0);
+  begin
+    tmp(0)            := a(0);
+    tmp(1)            := a(1);
+    tmp(55 downto 2)  := a(253 downto 200);
+    tmp(65 downto 56) := a(262) & a(262 downto 254);
+    tmp(66)           := a(263);
+    return tmp;
+  end function accum2prod;
 
   -- Accum Product layout:
   -- 265 1       sign

@@ -2,8 +2,8 @@
 
 ES=$1 # Exponent bits
 
-cd hw && rm posit_package.vhd && rm -rf posit_rtl
-ln -s ../posit_conf/posit_package_es$1.vhd posit_package.vhd
+cd hw && rm pe_package.vhd && rm -rf posit_rtl
+ln -s ../pe_posit_conf/pe_package_es$1.vhd pe_package.vhd
 ln -s ../posit/es$1/ posit_rtl
 
 cd ../sw
