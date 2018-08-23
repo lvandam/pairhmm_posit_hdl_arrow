@@ -87,7 +87,7 @@ void fill_batch(t_batch& batch, string& x_string, string& y_string, int batch_nu
         // distm_diff[i].set_raw_bits((getProb(x_string[batch_num * (xp + x - 1) + i])));
         // distm_simi[i].set_raw_bits((getProb(x_string[batch_num * (xp + x - 1) + i])));
     }
-    cout << endl;
+    // cout << endl;
 
     posit<NBITS, ES> initial_posit(initial / yp);
 

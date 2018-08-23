@@ -160,10 +160,12 @@ t_workload *gen_workload(unsigned long pairs, unsigned long fixedX, unsigned lon
         workload->bx = (uint32_t *) malloc(workload->batches * sizeof(uint32_t));
         workload->by = (uint32_t *) malloc(workload->batches * sizeof(uint32_t));
         workload->bbytes = (size_t *) malloc(workload->batches * sizeof(size_t));
+        workload->cups = 0;
 
         for (int i = 0; i < workload->pairs; i++) {
                 workload->hapl[i] = fixedY;
                 workload->read[i] = fixedX;
+                workload->cups += fixedY * fixedX;
         }
 
         // Set batch info

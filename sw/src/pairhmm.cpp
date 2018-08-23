@@ -76,6 +76,9 @@ int main(int argc, char ** argv)
 
         int rc = 0;
 
+        float f_hw = 125e6;
+        float max_cups = f_hw * (float)16;
+
         unsigned long pairs, x, y = 0;
         int initial_constant_power = 1;
         bool calculate_sw = true;
@@ -107,18 +110,17 @@ int main(int argc, char ** argv)
         std::string x_string = randomBasepairs(workload->batches * (px(x, y) + x - 1));
         std::string y_string = randomBasepairs(workload->batches * (py(y) + y - 1));
 
-        cout << "X_FULL = " << x_string << endl;
-        cout << "Y_FULL = " << y_string << endl;
-
+        // cout << "X_FULL = " << x_string << endl;
+        // cout << "Y_FULL = " << y_string << endl;
 
         for (int q = 0; q < workload->batches; q++) {
                 fill_batch(batches[q], x_string, y_string, q, workload->bx[q], workload->by[q], powf(2.0, initial_constant_power)); // HW unit starts with last batch
                 // print_batch_info(batches[q]);
 
-                cout << "BATCH " << q << endl;
-                cout << "X = " << x_string.substr(q * (px(x, y) + x - 1), (q + 1) * (px(x, y) + x - 1)) << endl;
-                cout << "Y = " << y_string.substr(q * (py(y) + y - 1), (q + 1) * (py(y) + y - 1)) << endl;
-                cout << endl;
+                // cout << "BATCH " << q << endl;
+                // cout << "X = " << x_string.substr(q * (px(x, y) + x - 1), (q + 1) * (px(x, y) + x - 1)) << endl;
+                // cout << "Y = " << y_string.substr(q * (py(y) + y - 1), (q + 1) * (py(y) + y - 1)) << endl;
+                // cout << endl;
         }
         stop = omp_get_wtime();
         t_fill_batch = stop - start;
@@ -195,7 +197,7 @@ int main(int argc, char ** argv)
                 // For now, duplicate batch information across all core MMIO registers
                 batch_length[i] = (i == 0 && workload->batches % avg_batches_per_core > 0) ? avg_batches_per_core + 1 : avg_batches_per_core; // Remainder of batches is done by first core
                 inits[i] = (i > CORES - 1) ? batches[0].init : batches[i].init;
-                x_len[i] = (i > CORES - 1) ? 0 : workload->by[i];
+                x_len[i] = (i > CORES - 1) ? 0 : workload->bx[i];
                 y_len[i] = (i > CORES - 1) ? 0 : workload->by[i];
         }
 
@@ -300,6 +302,13 @@ int main(int argc, char ** argv)
         // Reset UserCore
         uc.reset();
 
+        float p_fpga      = ((double)workload->cups / (double)t_fpga)  / 1000000; // in MCUPS
+        float p_sw        = ((double)workload->cups / (double)t_sw)    / 1000000; // in MCUPS
+        float p_float     = ((double)workload->cups / (double)t_float) / 1000000; // in MCUPS
+        float p_dec       = ((double)workload->cups / (double)t_dec)   / 1000000; // in MCUPS
+        float utilization = ((double)workload->cups / (double)t_fpga)  / max_cups;
+        float speedup     = t_sw / t_fpga;
+
         cout << "Adding timing data..." << endl;
         time_t t = chrono::system_clock::to_time_t(chrono::system_clock::now());
         ofstream outfile("pairhmm_es" + std::to_string(ES) + "_" + std::to_string(CORES) + "core_" + std::to_string(pairs) + "_" + std::to_string(x) + "_" + std::to_string(y) + "_" + std::to_string(initial_constant_power) + ".txt", ios::out | ios::app);
@@ -309,8 +318,8 @@ int main(int argc, char ** argv)
         outfile << "X = " << x << endl;
         outfile << "Y = " << y << endl;
         outfile << "Initial Constant = " << initial_constant_power << endl;
-        outfile << "t_fill_batch,t_fill_table,t_prepare_column,t_create_core,t_fpga,t_sw,t_float,t_dec" << endl;
-        outfile << setprecision(20) << fixed << t_fill_batch <<","<< t_fill_table <<","<< t_prepare_column <<","<< t_create_core <<","<< t_fpga <<","<< t_sw <<","<< t_float <<","<< t_dec << endl;
+        outfile << "cups,t_fill_batch,t_fill_table,t_prepare_column,t_create_core,t_fpga,p_fpga,t_sw,p_sw,t_float,p_float,t_dec,p_dec,utilization,speedup" << endl;
+        outfile << setprecision(20) << fixed << workload->cups <<","<< t_fill_batch <<","<< t_fill_table <<","<< t_prepare_column <<","<< t_create_core <<","<< t_fpga <<","<< p_fpga <<","<< t_sw <<","<< p_sw <<","<< t_float <<","<< p_float <<","<< t_dec <<","<< p_dec <<","<< utilization <<","<< speedup << endl;
         outfile.close();
 
         return 0;

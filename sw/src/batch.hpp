@@ -24,6 +24,7 @@ typedef struct struct_workload {
     size_t *bbytes;
 
     size_t bytes;
+    uint64_t cups;
 } t_workload;
 
 typedef union union_prob {
