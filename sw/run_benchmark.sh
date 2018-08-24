@@ -3,7 +3,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
 for p in 16 32
 do
-    for i in 5 10 15
+    for i in 1 5 10
     do
         $DIR/build/pairhmm $p 8 8 $i
         $DIR/build/pairhmm $p 16 16 $i
