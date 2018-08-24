@@ -42,7 +42,7 @@
 #endif
 
 /* Burst step length in bytes */
-#define BURST_LENGTH 128
+#define BURST_LENGTH 2048
 
 using namespace std;
 

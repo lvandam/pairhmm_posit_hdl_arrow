@@ -476,7 +476,7 @@ architecture pairhmm_unit of pairhmm_unit is
 
   signal cr_r, cr_d : reg;
 
-  type state_result_t is (IDLE, COLUMNWRITE, WAIT_ACCEPT, UNLOCK);
+  type state_result_t is (IDLE, WRITE_VALUE, WAIT_INPUT_READY, WRITE_COMMAND, WAIT_UNLOCK, WRITE_DONE);
   type reg_result is record
     state : state_result_t;
     cs    : cs_t;
@@ -822,18 +822,18 @@ begin
     end if;
   end process;
 
-  result_write_seq : process(clk, r.wed.batches_total, result_unlock_valid) is
+  result_write_seq : process(clk) is
     variable result_count : integer range 0 to MAX_BATCHES * PE_DEPTH := 0;
   begin
     if rising_edge(clk) then
       cw_r <= cw_d;
 
-      if result_unlock_valid = '1' then
-        result_count := result_count + 1;
-        if(result_count = to_integer(r.wed.batches_total) * PE_DEPTH) then
-          cw_r.cs.done <= '1';
-        end if;
-      end if;
+      -- if result_unlock_valid = '1' then
+      --   result_count := result_count + 1;
+      --   if(result_count = to_integer(r.wed.batches_total) * PE_DEPTH) then
+      --     -- cw_r.cs.done <= '1';
+      --   end if;
+      -- end if;
 
       -- Reset
       if reset = '1' then
@@ -869,11 +869,14 @@ begin
     cw_v.str_result_elem_out.data.data   := x"00000000";
 
     -- Disable command streams by default
-    o.cmd.valid := '0';
+    o.cmd.valid    := '0';
+    o.cmd.firstIdx := slvec(0, VALUES_WIDTH_RESULT);
+    o.cmd.lastIdx  := slvec(0, VALUES_WIDTH_RESULT);
+
     o.unl.ready := '0';
 
     -- Values buffer
-    o.cmd.ctrl(BUS_ADDR_WIDTH-1 downto 0) := r_result_data_hi & r_result_data_lo;
+    -- o.cmd.ctrl(BUS_ADDR_WIDTH-1 downto 0) := r_result_data_hi & r_result_data_lo;
 
     o.cmd.tag := (0 => '1', others => '0');
 
@@ -885,43 +888,69 @@ begin
         re.outfifo.c.rd_en <= '0';
         if control_start = '1' then
           cw_v.cs.reset_start := '1';
-          cw_v.state          := COLUMNWRITE;
+          cw_v.state          := WRITE_COMMAND;
           cw_v.cs.busy        := '1';
         end if;
 
-      when COLUMNWRITE =>
-        -- Write in case of valid output FIFO data
-        if re.outfifo.c.empty = '0' then
-          re.outfifo.c.rd_en <= '1';
-
-          cw_v.str_result_elem_out.data.valid  := '1';
-          cw_v.str_result_elem_out.data.dvalid := '1';
-          cw_v.str_result_elem_out.data.last   := '1';
-          cw_v.str_result_elem_out.data.data   := re.outfifo.dout;
-
-          o.cmd.firstIdx := slvec(cw_v.result_index, VALUES_WIDTH_RESULT);
-          o.cmd.lastIdx  := slvec(cw_v.result_index + 1, VALUES_WIDTH_RESULT);
-
-          cw_v.result_index := cw_r.result_index + 1;
-
-          cw_v.state := WAIT_ACCEPT;
-        end if;
-
-      when WAIT_ACCEPT =>
-        re.outfifo.c.rd_en <= '0';
+      when WRITE_COMMAND =>
+        o.cmd.firstIdx := slvec(0, VALUES_WIDTH_RESULT);
+        o.cmd.lastIdx  := slvec(0, VALUES_WIDTH_RESULT);
+        o.cmd.valid    := '1';
 
         if result_cmd_ready = '1' then
-          o.cmd.valid := '1';
-          -- Command is accepted, wait for unlock.
-          cw_v.state  := UNLOCK;
+          -- Command is accepted, wait for unlock
+          cw_v.state := WRITE_VALUE;
+        else
+          cw_v.state := WRITE_COMMAND;
         end if;
 
-      when UNLOCK =>
+      when WRITE_VALUE =>
+        if re.outfifo.c.valid = '1' then
+          cw_v.str_result_elem_out.data.valid  := '1';
+          cw_v.str_result_elem_out.data.dvalid := '1';
+          cw_v.str_result_elem_out.data.data   := re.outfifo.dout;
+          cw_v.str_result_elem_out.data.last   := '0';
+
+          if cw_r.result_index = to_integer(r.wed.batches_total) * PE_DEPTH - 1 then
+            cw_v.str_result_elem_out.data.last := '1';
+          else
+            cw_v.str_result_elem_out.data.last := '0';
+          end if;
+
+          cw_v.state := WAIT_INPUT_READY;
+        end if;
+
+      when WAIT_INPUT_READY =>
+        if cw_r.str_result_elem_in.data.ready = '1' then  -- Handshake occurred
+          cw_v.result_index := cw_r.result_index + 1;
+
+          re.outfifo.c.rd_en <= not re.outfifo.c.empty;
+
+          if cw_r.result_index = to_integer(r.wed.batches_total) * PE_DEPTH - 1 then
+            -- this was the last one
+            cw_v.state := WAIT_UNLOCK;
+          else
+            -- Write more values
+            cw_v.state := WRITE_VALUE;
+          end if;
+        else
+          cw_v.str_result_elem_out.data.valid  := '1';
+          cw_v.str_result_elem_out.data.dvalid := '1';
+          cw_v.str_result_elem_out.data.data   := cw_r.str_result_elem_out.data.data;
+          cw_v.str_result_elem_out.data.last   := cw_r.str_result_elem_out.data.last;
+        end if;
+
+      when WAIT_UNLOCK =>
         o.unl.ready := '1';
         if result_unlock_valid = '1' then
-          cw_v.state   := COLUMNWRITE;
+          cw_v.state   := WRITE_DONE;
           cw_v.cs.busy := '0';
         end if;
+
+      when WRITE_DONE =>
+        cw_v.cs.done := '1';
+        cw_v.cs.busy := '0';
+        cw_v.state   := IDLE;
     end case;
 
     -- Registered outputs
@@ -931,12 +960,14 @@ begin
     result_cmd_valid    <= o.cmd.valid;
     result_cmd_firstIdx <= o.cmd.firstIdx;
     result_cmd_lastIdx  <= o.cmd.lastIdx;
-    result_cmd_ctrl     <= o.cmd.ctrl;
+    -- result_cmd_ctrl     <= o.cmd.ctrl;
     result_cmd_tag      <= o.cmd.tag;
 
     result_unlock_ready <= o.unl.ready;
 
   end process;
+
+  result_cmd_ctrl <= r_result_data_hi & r_result_data_lo;
 
   loader_comb : process(r,
                         rs.state,
@@ -2036,18 +2067,10 @@ begin
   begin
     if rising_edge(re.clk_kernel) then
       if reset = '1' then
-        rs.state          <= SCHED_IDLE;
-        rs.cycle          <= (others => '0');
-        rs.pe_first       <= pe_in_empty;
-        rs.basepair       <= (others => '0');
-        rs.schedule       <= (others => '0');
-        rs.valid          <= '0';
-        rs.cell           <= PE_NORMAL;
-        rs.pairhmm_rst    <= '1';
-        rs.feedback_rd_en <= '0';
-        rs.feedback_wr_en <= '0';
-        rs.feedback_rst   <= '1';
-        rs.ybus_en        <= '0';
+        rs.state       <= SCHED_IDLE;
+        rs.pe_first    <= pe_in_empty;
+        rs.schedule    <= (others => '0');
+        rs.pairhmm_rst <= '1';
       else
         rs <= qs;
       end if;
