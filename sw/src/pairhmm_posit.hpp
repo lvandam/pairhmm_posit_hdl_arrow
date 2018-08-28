@@ -96,14 +96,14 @@ public:
         std::vector<t_probs>& prob = batch.prob;
 
         // Set to zero and intial value in the X direction
-        for(int j = 0; j < x + 1; j++) {
+        for(int j = 0; j < y + 1; j++) {
             M[0][j] = 0.0;
             I[0][j] = 0.0;
             D[0][j].set_raw_bits(init.initials[pair]);
         }
 
         // Set to zero in Y direction
-        for(int i = 1; i < y + 1; i++) {
+        for(int i = 1; i < x + 1; i++) {
             M[i][0] = 0.0;
             I[i][0] = 0.0;
             D[i][0] = 0.0;
