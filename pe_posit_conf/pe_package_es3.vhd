@@ -477,6 +477,9 @@ package pe_package is
   function sum2val (a     : in value_sum) return value;
   function accum2val (a   : in value_accum) return value;
   function prodsum2val (a : in value_prod_sum) return value;
+  function accum2prod (a     : in value_accum) return value_product;
+  function prod2prodsum (a   : in value_product) return value_prod_sum;
+  function val2prodsumsum (a : in value) return value_prod_sum_sum;
 
 end package;
 
@@ -538,6 +541,37 @@ package body pe_package is
     return tmp;
   end function prodsum2val;
 
+  function prod2prodsum (a : in value_product) return value_prod_sum is
+    variable tmp : std_logic_vector(POSIT_SERIALIZED_WIDTH_SUM_PRODUCT_ES3-1 downto 0);
+  begin
+    tmp(0)            := a(0);
+    tmp(1)            := a(1);
+    tmp(59 downto 6)  := a(55 downto 2);
+    tmp(5 downto 2)   := (others => '0');
+    tmp(69 downto 60) := a(65 downto 56);
+    tmp(70)           := a(66);
+    return tmp;
+  end function;
+
+  -- Prod Sum Sum Layout:
+  -- 75 1  sign
+  -- 74 10 scale
+  -- 64 62 fraction
+  -- 2  1 inf
+  -- 1  1 zero
+  -- 0
+  function val2prodsumsum (a : in value) return value_prod_sum_sum is
+    variable tmp : std_logic_vector(POSIT_SERIALIZED_WIDTH_SUM_PRODUCT_SUM_ES3-1 downto 0);
+  begin
+    tmp(0)            := a(0);
+    tmp(1)            := a(1);
+    tmp(63 downto 38) := a(27 downto 2);
+    tmp(37 downto 2)  := (others => '0');
+    tmp(73 downto 64) := a(36) & a(36 downto 28);
+    tmp(74)           := a(37);
+    return tmp;
+  end function;
+
   -- Accum layout:
   -- 264 1       sign
   -- 263 9       scale
@@ -565,7 +599,7 @@ package body pe_package is
   -- 1   1       zero
   -- 0
   function accum2prod (a : in value_accum) return value_product is
-    variable tmp : std_logic_vector(POSIT_SERIALIZED_WIDTH_ES3-1 downto 0);
+    variable tmp : std_logic_vector(POSIT_SERIALIZED_WIDTH_PRODUCT_ES3-1 downto 0);
   begin
     tmp(0)            := a(0);
     tmp(1)            := a(1);
