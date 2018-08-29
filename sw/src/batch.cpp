@@ -28,14 +28,14 @@ posit<NBITS, ES> random_number(float offset, float dev) {
 }
 
 uint32_t getProb(unsigned char rb) {
-    // uint32_t prob_A = 0x39201000;
-    // uint32_t prob_C = 0x39202000;
-    // uint32_t prob_T = 0x39203000;
-    // uint32_t prob_G = 0x39204000;
-    uint32_t prob_A = 0x39038FA0;
-    uint32_t prob_C = 0x398B1970;
-    uint32_t prob_T = 0x387CDA80;
-    uint32_t prob_G = 0x38393A00;
+    uint32_t prob_A = 0x39201000;
+    uint32_t prob_C = 0x39202000;
+    uint32_t prob_T = 0x39203000;
+    uint32_t prob_G = 0x39204000;
+    // uint32_t prob_A = 0x39038FA0;
+    // uint32_t prob_C = 0x398B1970;
+    // uint32_t prob_T = 0x387CDA80;
+    // uint32_t prob_G = 0x38393A00;
 
     if(rb == 'A') return prob_A;
     if(rb == 'C') return prob_C;
