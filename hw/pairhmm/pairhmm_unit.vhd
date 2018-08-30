@@ -1526,7 +1526,7 @@ begin
   -- Base X for the first PE must come from the read FIFO or it must come from the feedback FIFO with a latency of 1
   process(rs.ybus_addr1, rs.leny_init, rs.core_schedule1, readdelay)
   begin
-    if(rs.ybus_addr1 < rs.leny_init) then
+    if(rs.ybus_addr1 < rs.leny_init and rs.basepair1 < rs.lenx) then
       read_delay_n <= readdelay(PE_DEPTH - 1 - int(rs.core_schedule1));
     else
       read_delay_n <= BP_STOP;
@@ -1878,6 +1878,7 @@ begin
     vs.cell1           := rs.cell;
     vs.valid1          := rs.valid;
     vs.cycle1          := rs.cycle;
+    vs.basepair1       := rs.basepair;
 
 --------------------------------------------------------------------------------------------------- round robin schedule
     -- Schedule is always running, this is to keep the PairHMM core running even when the scheduler

@@ -120,7 +120,7 @@ package cu_snap_package is
 
     state               : cu_sched_state;  -- State of the scheduler process
     cycle, cycle1       : unsigned(CU_CYCLE_BITS - 1 downto 0);  -- This must be able to hold up to PAIRHMM_MAX_SIZE / PE_DEPTH * 2 * PAIRHMM_MAX_SIZE-1
-    basepair            : unsigned(log2e(PAIRHMM_MAX_SIZE) downto 0);  -- This must be able to hold up to PAIRHMM_MAX_SIZE-1 but is 1 larger to compare to size array values
+    basepair, basepair1 : unsigned(log2e(PAIRHMM_MAX_SIZE) downto 0);  -- This must be able to hold up to PAIRHMM_MAX_SIZE-1 but is 1 larger to compare to size array values
     element             : unsigned(log2e(PAIRHMM_NUM_PES) downto 0);  -- This must be able to hold PAIRHMM_NUM_PES-1
     schedule, schedule1 : unsigned(PE_DEPTH_BITS - 1 downto 0);  -- To hold the pair that is currently scheduled
     supercolumn         : unsigned(log2e(PAIRHMM_MAX_SIZE / PAIRHMM_NUM_PES) downto 0);  -- To keep track in which group of columns we are
@@ -163,6 +163,7 @@ package cu_snap_package is
     cycle             => (others => '0'),
     cycle1            => (others => '0'),
     basepair          => (others => '0'),
+    basepair1         => (others => '0'),
     element           => (others => '0'),
     schedule          => (others => '0'),
     schedule1         => (others => '0'),
