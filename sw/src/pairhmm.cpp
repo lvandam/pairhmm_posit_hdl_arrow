@@ -42,7 +42,7 @@
 #endif
 
 /* Burst step length in bytes */
-#define BURST_LENGTH 2048
+#define BURST_LENGTH 4096
 
 using namespace std;
 
@@ -271,6 +271,20 @@ int main(int argc, char ** argv)
                 cout << endl;
         }
 
+        // Get debug registers
+        cout << "DEBUG REGISTERS CONTENTS:" << endl;
+        for(int i = 0; i < 4; i++) {
+            uint32_t debug0, debug1;
+            addr_lohi val;
+            platform->read_mmio(REG_DEBUG + i, &val.full);
+
+            debug0 = val.half.hi;
+            debug1 = val.half.lo;
+
+            cout << i*2   << ": " << hex << debug0 << endl;
+            cout << i*2+1 << ": " << hex << debug1 << endl;
+        }
+        cout << endl;
 
         // Check for errors with SW calculation
         if (calculate_sw) {

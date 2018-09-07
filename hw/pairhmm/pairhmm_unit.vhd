@@ -9,7 +9,6 @@ library work;
 use work.Streams.all;
 use work.Utils.all;
 use work.Arrow.all;
-
 use work.SimUtils.all;
 
 use work.functions.slv8bpslv3;
@@ -63,6 +62,16 @@ entity pairhmm_unit is
 
     -- Batch offset (to fetch from Arrow)
     batch_offset : in std_logic_vector(REG_WIDTH-1 downto 0);
+
+    -- Debug
+    debug0 : out std_logic_vector(REG_WIDTH-1 downto 0);
+    debug1 : out std_logic_vector(REG_WIDTH-1 downto 0);
+    debug2 : out std_logic_vector(REG_WIDTH-1 downto 0);
+    debug3 : out std_logic_vector(REG_WIDTH-1 downto 0);
+    debug4 : out std_logic_vector(REG_WIDTH-1 downto 0);
+    debug5 : out std_logic_vector(REG_WIDTH-1 downto 0);
+    debug6 : out std_logic_vector(REG_WIDTH-1 downto 0);
+    debug7 : out std_logic_vector(REG_WIDTH-1 downto 0);
 
     -- Batch information
     batches    : in std_logic_vector(REG_WIDTH-1 downto 0);
@@ -140,6 +149,9 @@ architecture pairhmm_unit of pairhmm_unit is
   signal r_read_bp_hi, r_read_bp_lo         : std_logic_vector(REG_WIDTH - 1 downto 0);
   signal r_read_probs_hi, r_read_probs_lo   : std_logic_vector(REG_WIDTH - 1 downto 0);
   signal r_result_data_hi, r_result_data_lo : std_logic_vector(REG_WIDTH - 1 downto 0);
+
+  type reg_array_debug_t is array (0 to 7) of std_logic_vector(31 downto 0);
+  signal r_debug : reg_array_debug_t;
 
   signal r_batch_offset : std_logic_vector(REG_WIDTH - 1 downto 0);  -- To retrieve the correct data from Arrow columns
 
@@ -476,7 +488,7 @@ architecture pairhmm_unit of pairhmm_unit is
 
   signal cr_r, cr_d : reg;
 
-  type state_result_t is (IDLE, WRITE_VALUE, WAIT_INPUT_READY, WRITE_COMMAND, WAIT_UNLOCK, WRITE_DONE);
+  type state_result_t is (IDLE, WRITE_FIRST_VALUE, WRITE_VALUE, WAIT_INPUT_READY, WRITE_COMMAND, WAIT_UNLOCK, WRITE_DONE);
   type reg_result is record
     state : state_result_t;
     cs    : cs_t;
@@ -488,10 +500,37 @@ architecture pairhmm_unit of pairhmm_unit is
     str_result_elem_out : str_result_elem_out_t;
     str_result_elem_in  : str_result_elem_in_t;
 
+    outfifo_read : std_logic;
+
     reset_units : std_logic;
   end record;
 
   signal cw_r, cw_d : reg_result;
+
+  type basedelay_type is array (0 to PE_DEPTH - 1) of bp_type;
+  type probdelay_type is array (0 to PE_DEPTH - 1) of std_logic_vector(PAIRHMM_BITS_PER_PROB - 1 downto 0);
+
+  type state_shift_t is (IDLE, SHIFT, SHIFT_NEW, RESET_SHIFT);
+  type reg_shift_base is record
+    state : state_shift_t;
+    reset : std_logic;
+    rd_en : std_logic;
+    count : integer range 0 to 63;
+    valid : std_logic;
+    delay : basedelay_type;
+  end record;
+  type reg_shift_prob is record
+    state : state_shift_t;
+    reset : std_logic;
+    rd_en : std_logic;
+    count : integer range 0 to 63;
+    valid : std_logic;
+    delay : probdelay_type;
+  end record;
+
+  signal shift_read_r, shift_read_d : reg_shift_base;
+  signal shift_prob_r, shift_prob_d : reg_shift_prob;
+  signal shift_hapl_r, shift_hapl_d : reg_shift_base;
 
   -- Pair-HMM SA core signals
   signal q, r   : cu_int;
@@ -500,12 +539,7 @@ architecture pairhmm_unit of pairhmm_unit is
 
   signal read_delay, read_delay_n           : bp_type;
   signal ybus_data_delay, ybus_data_delay_n : pe_y_data_type;
-
-  type basedelay_type is array (0 to PE_DEPTH - 1) of bp_type;
-  signal readdelay, hapldelay : basedelay_type;
-
-  type probdelay_type is array (0 to PE_DEPTH - 1) of std_logic_vector(PAIRHMM_BITS_PER_PROB - 1 downto 0);
-  signal probdelay : probdelay_type;
+  signal y_data_vec                         : std_logic_vector(PE_DEPTH * BP_SIZE - 1 downto 0) := (others => '0');
 
   signal in_posit, in_posit_n : probabilities;
 
@@ -513,8 +547,33 @@ architecture pairhmm_unit of pairhmm_unit is
   signal read_delay_valid, hapl_delay_valid, prob_delay_valid : std_logic;
   signal haplfifo_reset                                       : std_logic;
 
+  signal outfifo_in   : std_logic_vector(31 downto 0);
+  signal outfifo_wren : std_logic;
+
+  signal resaccm, resacci, resaccm_n, resacci_n :  std_logic_vector(31 downto 0);
+
 begin
   reset <= not reset_n;
+
+  process(clk)
+    variable waiting : std_logic := '0';
+  begin
+      if rising_edge(clk) then
+          if reset = '1' then
+              re.reset <= '1';
+              waiting := '0';
+          end if;
+
+          if re.reset = '1' and reset = '0' then
+              if waiting = '0' then
+                  waiting := '1';
+              else
+                  waiting := '0';
+                  re.reset <= '0';
+              end if;
+          end if;
+      end if;
+  end process;
 
   -----------------------------------------------------------------------------
   -----------------------------------------------------------------------------
@@ -813,7 +872,17 @@ begin
       r_x_bppadded <= x_bppadded;
       r_initial    <= initial;
 
-      if control_reset = '1' then
+      -- Debug
+      debug0 <= r_debug(0);
+      debug1 <= r_debug(1);
+      debug2 <= r_debug(2);
+      debug3 <= r_debug(3);
+      debug4 <= r_debug(4);
+      debug5 <= r_debug(5);
+      debug6 <= r_debug(6);
+      debug7 <= r_debug(7);
+
+      if control_reset = '1' or reset = '1' then
         cu_reset(r);
         cr_r.reset_units <= '1';
       else
@@ -821,153 +890,6 @@ begin
       end if;
     end if;
   end process;
-
-  result_write_seq : process(clk) is
-    variable result_count : integer range 0 to MAX_BATCHES * PE_DEPTH := 0;
-  begin
-    if rising_edge(clk) then
-      cw_r <= cw_d;
-
-      -- if result_unlock_valid = '1' then
-      --   result_count := result_count + 1;
-      --   if(result_count = to_integer(r.wed.batches_total) * PE_DEPTH) then
-      --     -- cw_r.cs.done <= '1';
-      --   end if;
-      -- end if;
-
-      -- Reset
-      if reset = '1' then
-        cw_r.state          <= IDLE;
-        cw_r.cs.reset_start <= '0';
-        cw_r.cs.busy        <= '0';
-        cw_r.cs.done        <= '0';
-        cw_r.result_index   <= 0;
-        result_count        := 0;
-      end if;
-    end if;
-  end process;
-
-  result_write_comb : process(cw_r,
-                              re,
-                              str_result_elem_in,
-                              control_start,
-                              r_result_data_hi, r_result_data_lo,
-                              result_cmd_ready,
-                              result_unlock_valid, result_unlock_tag)
-    variable cw_v : reg_result;
-    variable o    : out_record;
-  begin
-    cw_v := cw_r;
-
-    -- ColumnReader Inputs:
-    cw_v.str_result_elem_in := str_result_elem_in;
-
-    -- Default ColumnWriter input
-    cw_v.str_result_elem_out.data.valid  := '0';
-    cw_v.str_result_elem_out.data.dvalid := '0';
-    cw_v.str_result_elem_out.data.last   := '0';
-    cw_v.str_result_elem_out.data.data   := x"00000000";
-
-    -- Disable command streams by default
-    o.cmd.valid    := '0';
-    o.cmd.firstIdx := slvec(0, VALUES_WIDTH_RESULT);
-    o.cmd.lastIdx  := slvec(0, VALUES_WIDTH_RESULT);
-
-    o.unl.ready := '0';
-
-    -- Values buffer
-    -- o.cmd.ctrl(BUS_ADDR_WIDTH-1 downto 0) := r_result_data_hi & r_result_data_lo;
-
-    o.cmd.tag := (0 => '1', others => '0');
-
-    -- Reset start is low by default.
-    cw_v.cs.reset_start := '0';
-
-    case cw_r.state is
-      when IDLE =>
-        re.outfifo.c.rd_en <= '0';
-        if control_start = '1' then
-          cw_v.cs.reset_start := '1';
-          cw_v.state          := WRITE_COMMAND;
-          cw_v.cs.busy        := '1';
-        end if;
-
-      when WRITE_COMMAND =>
-        o.cmd.firstIdx := slvec(0, VALUES_WIDTH_RESULT);
-        o.cmd.lastIdx  := slvec(0, VALUES_WIDTH_RESULT);
-        o.cmd.valid    := '1';
-
-        if result_cmd_ready = '1' then
-          -- Command is accepted, wait for unlock
-          cw_v.state := WRITE_VALUE;
-        else
-          cw_v.state := WRITE_COMMAND;
-        end if;
-
-      when WRITE_VALUE =>
-        if re.outfifo.c.valid = '1' then
-          cw_v.str_result_elem_out.data.valid  := '1';
-          cw_v.str_result_elem_out.data.dvalid := '1';
-          cw_v.str_result_elem_out.data.data   := re.outfifo.dout;
-          cw_v.str_result_elem_out.data.last   := '0';
-
-          if cw_r.result_index = to_integer(r.wed.batches_total) * PE_DEPTH - 1 then
-            cw_v.str_result_elem_out.data.last := '1';
-          else
-            cw_v.str_result_elem_out.data.last := '0';
-          end if;
-
-          cw_v.state := WAIT_INPUT_READY;
-        end if;
-
-      when WAIT_INPUT_READY =>
-        if cw_r.str_result_elem_in.data.ready = '1' then  -- Handshake occurred
-          cw_v.result_index := cw_r.result_index + 1;
-
-          re.outfifo.c.rd_en <= not re.outfifo.c.empty;
-
-          if cw_r.result_index = to_integer(r.wed.batches_total) * PE_DEPTH - 1 then
-            -- this was the last one
-            cw_v.state := WAIT_UNLOCK;
-          else
-            -- Write more values
-            cw_v.state := WRITE_VALUE;
-          end if;
-        else
-          cw_v.str_result_elem_out.data.valid  := '1';
-          cw_v.str_result_elem_out.data.dvalid := '1';
-          cw_v.str_result_elem_out.data.data   := cw_r.str_result_elem_out.data.data;
-          cw_v.str_result_elem_out.data.last   := cw_r.str_result_elem_out.data.last;
-        end if;
-
-      when WAIT_UNLOCK =>
-        o.unl.ready := '1';
-        if result_unlock_valid = '1' then
-          cw_v.state   := WRITE_DONE;
-          cw_v.cs.busy := '0';
-        end if;
-
-      when WRITE_DONE =>
-        cw_v.cs.done := '1';
-        cw_v.cs.busy := '0';
-        cw_v.state   := IDLE;
-    end case;
-
-    -- Registered outputs
-    cw_d <= cw_v;
-
-    -- Combinatorial outputs
-    result_cmd_valid    <= o.cmd.valid;
-    result_cmd_firstIdx <= o.cmd.firstIdx;
-    result_cmd_lastIdx  <= o.cmd.lastIdx;
-    -- result_cmd_ctrl     <= o.cmd.ctrl;
-    result_cmd_tag      <= o.cmd.tag;
-
-    result_unlock_ready <= o.unl.ready;
-
-  end process;
-
-  result_cmd_ctrl <= r_result_data_hi & r_result_data_lo;
 
   loader_comb : process(r,
                         rs.state,
@@ -978,12 +900,16 @@ begin
                         cmd_read_ready,
                         str_hapl_elem_in,
                         str_read_elem_in,
-                        re.haplfifo.c.empty,
+                        re.haplfifo.c.empty, re.haplfifo.c.wr_rst_busy,
+                        re.readfifo.c.wr_rst_busy,
+                        re.probfifo.c.wr_rst_busy,
+                        re.outfifo.c.wr_rst_busy, re.outfifo.c.rd_rst_busy,
                         r_hapl_off_hi, r_hapl_off_lo,
                         r_read_off_hi, r_read_off_lo,
                         r_hapl_bp_hi, r_hapl_bp_lo,
                         r_read_bp_hi, r_read_bp_lo,
-                        r_read_probs_hi, r_read_probs_lo)
+                        r_read_probs_hi, r_read_probs_lo,
+                        r_batch_offset, r_initial, r_batches, r_x_len, r_y_len, r_x_size, r_x_padded, r_y_size, r_y_padded, r_x_bppadded)
     variable v    : cu_int;
     variable cr_v : reg;
   begin
@@ -1052,10 +978,15 @@ begin
         v.inits.y_padded    := u(r_y_padded);
         v.inits.x_bppadded  := u(r_x_bppadded);
 
-        v.state := LOAD_REQUEST_DATA;
+        v.state := LOAD_RESET_FIFO;
 
       when LOAD_RESET_FIFO =>
-        if re.haplfifo.c.empty = '1' then
+        if re.haplfifo.c.empty = '1'
+          and re.readfifo.c.wr_rst_busy = '0'
+          and re.haplfifo.c.wr_rst_busy = '0'
+          and re.probfifo.c.wr_rst_busy = '0'
+          and re.outfifo.c.wr_rst_busy = '0'
+          and re.outfifo.c.rd_rst_busy = '0' then
           v.state := LOAD_REQUEST_DATA;
         end if;
 
@@ -1105,9 +1036,6 @@ begin
 
         -- Wait for command accepted
         if cr_r.command_hapl.ready = '1' and cr_r.command_read.ready = '1' then
-          -- dumpStdOut("Requested haplotype arrays: " & integer'image(int(cr_r.command_hapl.firstIdx)) & " ... " & integer'image(int(cr_v.command_hapl.lastIdx)));
-          -- dumpStdOut("Requested read arrays: " & integer'image(int(cr_r.command_read.firstIdx)) & " ... " & integer'image(int(cr_v.command_read.lastIdx)));
-
           v.state := LOAD_LOADX_LOADY;  -- Load reads and haplotypes
         end if;
 
@@ -1204,7 +1132,7 @@ begin
               v.filled := '0';
               if v.wed.batches /= 0 then
                 -- We can start loading a new batch
-                v.state := LOAD_RESET_FIFO;  --LOAD_REQUEST_DATA
+                v.state := LOAD_RESET_FIFO;
               else
                 v.state := LOAD_DONE;
               end if;
@@ -1240,6 +1168,154 @@ begin
     cr_d <= cr_v;
   end process;
 
+  result_write_seq : process(clk) is
+    variable result_count : integer range 0 to MAX_BATCHES * PE_DEPTH := 0;
+  begin
+    if rising_edge(clk) then
+      cw_r <= cw_d;
+
+      -- Reset
+      if reset = '1' then
+        cw_r.state          <= IDLE;
+        cw_r.cs.reset_start <= '0';
+        cw_r.cs.busy        <= '0';
+        cw_r.cs.done        <= '0';
+        cw_r.result_index   <= 0;
+        result_count        := 0;
+      end if;
+    end if;
+  end process;
+
+  result_write_comb : process(cw_r,
+                              re,
+                              str_result_elem_in,
+                              control_start,
+                              r.wed.batches_total,
+                              r_result_data_hi, r_result_data_lo,
+                              result_cmd_ready,
+                              result_unlock_valid, result_unlock_tag)
+    variable cw_v : reg_result;
+    variable o    : out_record;
+  begin
+    cw_v := cw_r;
+
+    -- ColumnWriter Inputs:
+    cw_v.str_result_elem_in := str_result_elem_in;
+
+    -- Default ColumnWriter input
+    cw_v.str_result_elem_out.data.valid  := '0';
+    cw_v.str_result_elem_out.data.dvalid := '0';
+    cw_v.str_result_elem_out.data.last   := '0';
+    cw_v.str_result_elem_out.data.data   := x"00000000";
+
+    -- Disable command streams by default
+    o.cmd.valid    := '0';
+    o.cmd.firstIdx := slvec(0, VALUES_WIDTH_RESULT);
+    o.cmd.lastIdx  := slvec(0, VALUES_WIDTH_RESULT);
+
+    o.unl.ready := '0';
+
+    o.cmd.tag := (0 => '1', others => '0');
+
+    -- Reset start is low by default.
+    cw_v.cs.reset_start := '0';
+
+    cw_v.outfifo_read := '0';
+
+    case cw_r.state is
+      when IDLE =>
+        if control_start = '1' then
+          cw_v.cs.reset_start := '1';
+          cw_v.state          := WRITE_COMMAND;
+          cw_v.cs.busy        := '1';
+        end if;
+
+      when WRITE_COMMAND =>
+        o.cmd.firstIdx := slvec(0, VALUES_WIDTH_RESULT);
+        o.cmd.lastIdx  := slvec(0, VALUES_WIDTH_RESULT);
+        o.cmd.valid    := '1';
+
+        if result_cmd_ready = '1' then
+          -- Command is accepted, wait for unlock
+          cw_v.state := WRITE_FIRST_VALUE;
+        else
+          cw_v.state := WRITE_COMMAND;
+        end if;
+
+      when WRITE_FIRST_VALUE =>
+        if re.outfifo.c.empty = '0' and re.outfifo.c.rd_rst_busy = '0' then
+          cw_v.outfifo_read := '1';
+          cw_v.state        := WRITE_VALUE;
+        end if;
+
+      when WRITE_VALUE =>
+        if re.outfifo.c.valid = '1' then
+          cw_v.str_result_elem_out.data.valid  := '1';
+          cw_v.str_result_elem_out.data.dvalid := '1';
+          cw_v.str_result_elem_out.data.data   := re.outfifo.dout;
+          cw_v.str_result_elem_out.data.last   := '0';
+
+          if cw_r.result_index = to_integer(r.wed.batches_total) * PE_DEPTH - 1 then
+            cw_v.str_result_elem_out.data.last := '1';
+          else
+            cw_v.str_result_elem_out.data.last := '0';
+          end if;
+
+          cw_v.state := WAIT_INPUT_READY;
+        end if;
+
+      when WAIT_INPUT_READY =>
+        if cw_r.str_result_elem_in.data.ready = '1' then  -- Handshake occurred
+          cw_v.result_index := cw_r.result_index + 1;
+
+          cw_v.outfifo_read := not re.outfifo.c.empty;
+
+          if cw_r.result_index = to_integer(r.wed.batches_total) * PE_DEPTH - 1 then
+            -- this was the last one
+            cw_v.state := WAIT_UNLOCK;
+          else
+            -- Write more values
+            if cw_v.result_index mod PE_DEPTH = 0 then
+              cw_v.state := WRITE_FIRST_VALUE;
+            else
+              cw_v.state := WRITE_VALUE;
+            end if;
+          end if;
+        else
+          cw_v.str_result_elem_out.data.valid  := '1';
+          cw_v.str_result_elem_out.data.dvalid := '1';
+          cw_v.str_result_elem_out.data.data   := cw_r.str_result_elem_out.data.data;
+          cw_v.str_result_elem_out.data.last   := cw_r.str_result_elem_out.data.last;
+        end if;
+
+      when WAIT_UNLOCK =>
+        o.unl.ready := '1';
+        if result_unlock_valid = '1' then
+          cw_v.state   := WRITE_DONE;
+          cw_v.cs.busy := '0';
+        end if;
+
+      when WRITE_DONE =>
+        cw_v.cs.done := '1';
+        cw_v.cs.busy := '0';
+        cw_v.state   := IDLE;
+    end case;
+
+    -- Registered outputs
+    cw_d <= cw_v;
+
+    -- Combinatorial outputs
+    result_cmd_valid    <= o.cmd.valid;
+    result_cmd_firstIdx <= o.cmd.firstIdx;
+    result_cmd_lastIdx  <= o.cmd.lastIdx;
+    result_cmd_tag      <= o.cmd.tag;
+
+    result_unlock_ready <= o.unl.ready;
+
+  end process;
+
+  result_cmd_ctrl <= r_result_data_hi & r_result_data_lo;
+
 
   --  ____                           ______   _____   ______    ____
   -- |  _ \                         |  ____| |_   _| |  ____|  / __ \
@@ -1248,243 +1324,307 @@ begin
   -- | |_) | | (_| | \__ \ |  __/   | |       _| |_  | |      | |__| | \__ \
   -- |____/   \__,_| |___/  \___|   |_|      |_____| |_|       \____/  |___/
 
-  -- Read shift register
-  process(re.clk_kernel, reset, re.readfifo, rs.shift_read_buffer, rs.read_delay_rst, read_delay_count)
+  shift_seq : process(re.clk_kernel) is
   begin
-    read_delay_valid <= '0';
-    if(read_delay_count > PE_DEPTH-1) then
-      read_delay_valid <= '1';
-    end if;
+    if rising_edge(re.clk_kernel) then
+      if re.reset = '1' then
+        shift_read_r.state <= IDLE;
+        shift_read_r.rd_en <= '0';
+        shift_read_r.reset <= '1';
+        shift_read_r.count <= 0;
+        shift_read_r.delay <= (others => BP_IGNORE);
 
-    if(rising_edge(re.clk_kernel)) then
-      re.readfifo.c.rd_en1 <= re.readfifo.c.rd_en;
-
-      if re.readfifo.c.valid = '1' then
-        for K in 1 to PE_DEPTH - 1 loop
-          readdelay(K) <= readdelay(K - 1);
-        end loop;
-        readdelay(0) <= slv3bp(re.readfifo.dout);
-
-        read_delay_count <= read_delay_count + 1;
-      end if;
-
-      re.readfifo.c.rd_en <= '0';
-      if(re.readfifo.c.empty = '0') then
-        if re.readfifo.c.valid = '1' then
-          if read_delay_count > PE_DEPTH-3 then
-            if rs.shift_read_buffer = '1' then
-              re.readfifo.c.rd_en <= '1';
-            end if;
-          else
-            re.readfifo.c.rd_en <= '1';
-          end if;
-        else
-          if re.readfifo.c.rd_en = '1' then
-            if read_delay_count > PE_DEPTH-3 then
-              if rs.shift_read_buffer = '1' then
-                re.readfifo.c.rd_en <= '1';
-              end if;
-            end if;
-          elsif re.readfifo.c.rd_en1 = '1' then
-            if read_delay_count > PE_DEPTH-2 then
-              if rs.shift_read_buffer = '1' then
-                re.readfifo.c.rd_en <= '1';
-              end if;
-            end if;
-          else
-            if read_delay_count > PE_DEPTH-1 then
-              if rs.shift_read_buffer = '1' then
-                re.readfifo.c.rd_en <= '1';
-              end if;
-            else
-              re.readfifo.c.rd_en <= '1';
-            end if;
-          end if;
-        end if;
-      end if;
-
-      if(rs.read_delay_rst = '1' or reset = '1') then
-        read_delay_count <= 0;
-        readdelay        <= (others => BP_IGNORE);
-      end if;
-    end if;
-  end process;
-
-  -- Prob shift register
-  process(re.clk_kernel, reset, re.probfifo, rs.shift_prob_buffer, rs.prob_delay_rst, prob_delay_count)
-  begin
-    prob_delay_valid <= '0';
-    if(prob_delay_count > PE_DEPTH-1) then
-      prob_delay_valid <= '1';
-    end if;
-
-    if(rising_edge(re.clk_kernel)) then
-      re.probfifo.c.rd_en1 <= re.probfifo.c.rd_en;
-
-      if re.probfifo.c.valid = '1' then
-        for K in 1 to PE_DEPTH - 1 loop
-          probdelay(K) <= probdelay(K - 1);
-        end loop;
-        probdelay(0) <= re.probfifo.dout(PAIRHMM_BITS_PER_PROB - 1 downto 0);
-
-        prob_delay_count <= prob_delay_count + 1;
-      end if;
-
-      re.probfifo.c.rd_en <= '0';
-      if(re.probfifo.c.empty = '0') then
-        if re.probfifo.c.valid = '1' then
-          if prob_delay_count > PE_DEPTH-3 then
-            if rs.shift_prob_buffer = '1' then
-              re.probfifo.c.rd_en <= '1';
-            end if;
-          else
-            re.probfifo.c.rd_en <= '1';
-          end if;
-        else
-          if re.probfifo.c.rd_en = '1' then
-            if prob_delay_count > PE_DEPTH-3 then
-              if rs.shift_prob_buffer = '1' then
-                re.probfifo.c.rd_en <= '1';
-              end if;
-            end if;
-          elsif re.probfifo.c.rd_en1 = '1' then
-            if prob_delay_count > PE_DEPTH-2 then
-              if rs.shift_prob_buffer = '1' then
-                re.probfifo.c.rd_en <= '1';
-              end if;
-            end if;
-          else
-            if prob_delay_count > PE_DEPTH-1 then
-              if rs.shift_prob_buffer = '1' then
-                re.probfifo.c.rd_en <= '1';
-              end if;
-            else
-              re.probfifo.c.rd_en <= '1';
-            end if;
-          end if;
-        end if;
-      end if;
-
-      if(rs.prob_delay_rst = '1' or reset = '1') then
-        prob_delay_count <= 0;
+        shift_prob_r.state <= IDLE;
+        shift_prob_r.rd_en <= '0';
+        shift_prob_r.reset <= '1';
+        shift_prob_r.count <= 0;
         for K in 0 to PE_DEPTH - 1 loop
-          probdelay(K) <= (others => '0');
+          shift_prob_r.delay(K) <= (others => '0');
         end loop;
+
+        shift_hapl_r.state <= IDLE;
+        shift_hapl_r.rd_en <= '0';
+        shift_hapl_r.reset <= '1';
+        shift_hapl_r.count <= 0;
+        shift_hapl_r.delay <= (others => BP_IGNORE);
+        else
+          shift_read_r <= shift_read_d;
+          shift_prob_r <= shift_prob_d;
+          shift_hapl_r <= shift_hapl_d;
       end if;
     end if;
   end process;
 
-  -- Haplotype shift register
-  process(re.clk_kernel, reset, re.haplfifo, rs.shift_hapl_buffer, rs.hapl_delay_rst, hapl_delay_count)
+  shift_read_comb : process(control_start, shift_read_r, re.readfifo.c.empty, re.readfifo.c.rd_rst_busy, re.readfifo.c.valid, re.readfifo.dout, rs.shift_read_buffer, rs.read_delay_rst)
+    variable shift_v : reg_shift_base;
   begin
-    hapl_delay_valid <= '0';
-    if(hapl_delay_count > PE_DEPTH-1) then
-      hapl_delay_valid <= '1';
+    shift_v := shift_read_r;
+
+    shift_v.rd_en := '0';
+    shift_v.reset := '0';
+
+    shift_v.valid := '0';
+    if shift_v.count > PE_DEPTH-1 then
+      shift_v.valid := '1';
     end if;
 
-    if(rising_edge(re.clk_kernel)) then
-      re.haplfifo.c.rd_en1 <= re.haplfifo.c.rd_en;
+    case shift_read_r.state is
+      when IDLE =>
+        if control_start = '1' then
+          shift_v.state := SHIFT;
+        end if;
 
-      if re.haplfifo.c.valid = '1' then
-        for K in 1 to PE_DEPTH - 1 loop
-          hapldelay(K) <= hapldelay(K - 1);
-        end loop;
-        hapldelay(0) <= slv3bp(re.haplfifo.dout);
+      when SHIFT =>
+        if rs.shift_read_buffer = '1' and re.readfifo.c.empty = '0' then
+          shift_v.rd_en := '1';
+          shift_v.state := SHIFT_NEW;
+        end if;
 
-        hapl_delay_count <= hapl_delay_count + 1;
-      end if;
-
-      re.haplfifo.c.rd_en <= '0';
-      if(re.haplfifo.c.empty = '0') then
-        if re.haplfifo.c.valid = '1' then
-          if hapl_delay_count > PE_DEPTH-3 then
-            if rs.shift_hapl_buffer = '1' then
-              re.haplfifo.c.rd_en <= '1';
+        -- Determine read enable
+        if(re.readfifo.c.empty = '0' and re.readfifo.c.rd_rst_busy = '0') then
+          if re.readfifo.c.valid = '1' then  -- We have written
+            if shift_read_r.count < PE_DEPTH - 2 then
+              shift_v.rd_en := '1';
+              shift_v.state := SHIFT_NEW;
             end if;
           else
-            re.haplfifo.c.rd_en <= '1';
-          end if;
-        else
-          if re.haplfifo.c.rd_en = '1' then
-            if hapl_delay_count > PE_DEPTH-3 then
-              if rs.shift_hapl_buffer = '1' then
-                re.haplfifo.c.rd_en <= '1';
-              end if;
+            -- Not Empty, Not Valid, No Pending Read -> Read if we have space
+            if shift_read_r.count < PE_DEPTH then
+              shift_v.rd_en := '1';
+              shift_v.state := SHIFT_NEW;
             end if;
-          elsif re.haplfifo.c.rd_en1 = '1' then
-            if hapl_delay_count > PE_DEPTH-2 then
-              if rs.shift_hapl_buffer = '1' then
-                re.haplfifo.c.rd_en <= '1';
-              end if;
-            end if;
-          else
-            if hapl_delay_count > PE_DEPTH-1 then
-              if rs.shift_hapl_buffer = '1' then
-                re.haplfifo.c.rd_en <= '1';
-              end if;
-            else
-              re.haplfifo.c.rd_en <= '1';
-            end if;
+          -- end if;
           end if;
         end if;
-      end if;
 
-      if(rs.hapl_delay_rst = '1' or reset = '1') then
-        hapl_delay_count <= 0;
-        hapldelay        <= (others => BP_IGNORE);
-      end if;
+        if rs.read_delay_rst = '1' then
+          shift_v.state := RESET_SHIFT;
+        end if;
+
+      when SHIFT_NEW =>
+        if re.readfifo.c.valid = '1' then
+          -- Shift in new result
+          for K in 1 to PE_DEPTH - 1 loop
+            shift_v.delay(K) := shift_read_r.delay(K - 1);
+          end loop;
+          shift_v.delay(0) := slv3bp(re.readfifo.dout);
+          shift_v.count    := shift_read_r.count + 1;
+
+          shift_v.state := SHIFT;
+        end if;
+
+      when RESET_SHIFT =>
+        shift_v.delay := (others => BP_IGNORE);
+        shift_v.count := 0;
+        shift_v.state := SHIFT;
+    end case;
+
+    -- Registered outputs
+    shift_read_d <= shift_v;
+
+    -- Combinatorial outputs
+    re.readfifo.c.rd_en <= shift_v.rd_en;
+  end process;
+
+  shift_hapl_comb : process(control_start, shift_hapl_r, re.haplfifo.c.empty, re.haplfifo.c.rd_rst_busy, re.haplfifo.c.valid, re.haplfifo.dout, rs.shift_hapl_buffer, rs.hapl_delay_rst)
+    variable shift_v : reg_shift_base;
+  begin
+    shift_v := shift_hapl_r;
+
+    shift_v.rd_en := '0';
+    shift_v.reset := '0';
+
+    shift_v.valid := '0';
+    if shift_v.count > PE_DEPTH-1 then
+      shift_v.valid := '1';
     end if;
+
+    case shift_hapl_r.state is
+      when IDLE =>
+        if control_start = '1' then
+          shift_v.state := SHIFT;
+        end if;
+
+      when SHIFT =>
+        if rs.shift_hapl_buffer = '1' and re.haplfifo.c.empty = '0' then
+          shift_v.rd_en := '1';
+          shift_v.state := SHIFT_NEW;
+        end if;
+
+        -- Determine read enable
+        if(re.haplfifo.c.empty = '0' and re.haplfifo.c.rd_rst_busy = '0') then
+          if re.haplfifo.c.valid = '1' then  -- We have written
+            if shift_hapl_r.count < PE_DEPTH - 2 then
+              shift_v.rd_en := '1';
+              shift_v.state := SHIFT_NEW;
+            end if;
+          else
+            -- Not Empty, Not Valid, No Pending Read -> Read if we have space
+            if shift_hapl_r.count < PE_DEPTH then
+              shift_v.rd_en := '1';
+              shift_v.state := SHIFT_NEW;
+            end if;
+          -- end if;
+          end if;
+        end if;
+
+        if rs.hapl_delay_rst = '1' then
+          shift_v.state := RESET_SHIFT;
+        end if;
+
+      when SHIFT_NEW =>
+        if re.haplfifo.c.valid = '1' then
+          -- Shift in new result
+          for K in 1 to PE_DEPTH - 1 loop
+            shift_v.delay(K) := shift_hapl_r.delay(K - 1);
+          end loop;
+          shift_v.delay(0) := slv3bp(re.haplfifo.dout);
+          shift_v.count    := shift_hapl_r.count + 1;
+
+          shift_v.state := SHIFT;
+        end if;
+
+      when RESET_SHIFT =>
+        shift_v.delay := (others => BP_IGNORE);
+        shift_v.count := 0;
+        shift_v.state := SHIFT;
+    end case;
+
+    -- Registered outputs
+    shift_hapl_d <= shift_v;
+
+    -- Combinatorial outputs
+    re.haplfifo.c.rd_en <= shift_v.rd_en;
+  end process;
+
+  shift_prob_comb : process(control_start, shift_prob_r, re.probfifo.c.empty, re.probfifo.c.rd_rst_busy, re.probfifo.c.valid, re.probfifo.dout, rs.shift_prob_buffer, rs.prob_delay_rst)
+    variable shift_v : reg_shift_prob;
+  begin
+    shift_v := shift_prob_r;
+
+    shift_v.rd_en := '0';
+    shift_v.reset := '0';
+
+    shift_v.valid := '0';
+    if shift_v.count > PE_DEPTH-1 then
+      shift_v.valid := '1';
+    end if;
+
+    case shift_prob_r.state is
+      when IDLE =>
+        if control_start = '1' then
+          shift_v.state := SHIFT;
+        end if;
+
+      when SHIFT =>
+        if rs.shift_prob_buffer = '1' and re.probfifo.c.empty = '0' then
+          shift_v.rd_en := '1';
+          shift_v.state := SHIFT_NEW;
+        end if;
+
+        -- Determine read enable
+        if re.probfifo.c.empty = '0' and re.probfifo.c.rd_rst_busy = '0' then
+          if re.probfifo.c.valid = '1' then  -- We have written
+            if shift_prob_r.count < PE_DEPTH - 2 then
+              shift_v.rd_en := '1';
+              shift_v.state := SHIFT_NEW;
+            end if;
+          else
+            -- Not Empty, Not Valid, No Pending Read -> Read if we have space
+            if shift_prob_r.count < PE_DEPTH then
+              shift_v.rd_en := '1';
+              shift_v.state := SHIFT_NEW;
+            end if;
+          -- end if;
+          end if;
+        end if;
+
+        if rs.prob_delay_rst = '1' then
+          shift_v.state := RESET_SHIFT;
+        end if;
+
+      when SHIFT_NEW =>
+        if re.probfifo.c.valid = '1' then
+          -- Shift in new result
+          for K in 1 to PE_DEPTH - 1 loop
+            shift_v.delay(K) := shift_prob_r.delay(K - 1);
+          end loop;
+          shift_v.delay(0) := re.probfifo.dout(PAIRHMM_BITS_PER_PROB - 1 downto 0);
+          shift_v.count    := shift_prob_r.count + 1;
+
+          shift_v.state := SHIFT;
+        end if;
+
+      when RESET_SHIFT =>
+        for K in 0 to PE_DEPTH - 1 loop
+          shift_v.delay(K) := (others => '0');
+        end loop;
+        shift_v.count := 0;
+        shift_v.state := SHIFT;
+    end case;
+
+    -- Registered outputs
+    shift_prob_d <= shift_v;
+
+    -- Combinatorial outputs
+    re.probfifo.c.rd_en <= shift_v.rd_en;
   end process;
 
   read_fifo : base_fifo port map (
-    rst       => reset,
-    wr_clk    => clk,
-    rd_clk    => re.clk_kernel,
-    din       => slv8bpslv3(r.read_data(7 downto 0)),
-    dout      => re.readfifo.dout,
-    wr_en     => re.readfifo.c.wr_en,
-    rd_en     => re.readfifo.c.rd_en,
-    full      => re.readfifo.c.full,
-    wr_ack    => re.readfifo.c.wr_ack,
-    overflow  => re.readfifo.c.overflow,
-    empty     => re.readfifo.c.empty,
-    valid     => re.readfifo.c.valid,
-    underflow => re.readfifo.c.underflow
+    srst        => shift_read_r.reset,
+    wr_clk      => clk,
+    rd_clk      => re.clk_kernel,
+    din         => slv8bpslv3(r.read_data(7 downto 0)),
+    dout        => re.readfifo.dout,
+    wr_en       => re.readfifo.c.wr_en,
+    rd_en       => re.readfifo.c.rd_en,
+    full        => re.readfifo.c.full,
+    wr_ack      => re.readfifo.c.wr_ack,
+    overflow    => re.readfifo.c.overflow,
+    empty       => re.readfifo.c.empty,
+    valid       => re.readfifo.c.valid,
+    underflow   => re.readfifo.c.underflow,
+    wr_rst_busy => re.readfifo.c.wr_rst_busy,
+    rd_rst_busy => re.readfifo.c.rd_rst_busy
     );
   re.readfifo.c.wr_en <= r.read_wren(0);
 
   prob_fifo_inst : prob_fifo port map (
-    rst       => reset,
-    wr_clk    => clk,
-    rd_clk    => re.clk_kernel,
-    din       => r.prob_data(PAIRHMM_BITS_PER_PROB - 1 downto 0),
-    dout      => re.probfifo.dout,
-    wr_en     => re.probfifo.c.wr_en,
-    rd_en     => re.probfifo.c.rd_en,
-    full      => re.probfifo.c.full,
-    wr_ack    => re.probfifo.c.wr_ack,
-    overflow  => re.probfifo.c.overflow,
-    empty     => re.probfifo.c.empty,
-    valid     => re.probfifo.c.valid,
-    underflow => re.probfifo.c.underflow
+    srst        => shift_prob_r.reset,
+    wr_clk      => clk,
+    rd_clk      => re.clk_kernel,
+    din         => r.prob_data(PAIRHMM_BITS_PER_PROB - 1 downto 0),
+    dout        => re.probfifo.dout,
+    wr_en       => re.probfifo.c.wr_en,
+    rd_en       => re.probfifo.c.rd_en,
+    full        => re.probfifo.c.full,
+    wr_ack      => re.probfifo.c.wr_ack,
+    overflow    => re.probfifo.c.overflow,
+    empty       => re.probfifo.c.empty,
+    valid       => re.probfifo.c.valid,
+    underflow   => re.probfifo.c.underflow,
+    wr_rst_busy => re.probfifo.c.wr_rst_busy,
+    rd_rst_busy => re.probfifo.c.rd_rst_busy
     );
   re.probfifo.c.wr_en <= r.prob_wren;
 
-  haplfifo_reset <= rs.haplfifo_reset or reset;
+  haplfifo_reset <= rs.haplfifo_reset or shift_hapl_r.reset;
   hapl_fifo : base_fifo port map (
-    rst       => haplfifo_reset,
-    wr_clk    => clk,
-    rd_clk    => re.clk_kernel,
-    din       => slv8bpslv3(r.hapl_data(7 downto 0)),
-    dout      => re.haplfifo.dout,
-    wr_en     => re.haplfifo.c.wr_en,
-    rd_en     => re.haplfifo.c.rd_en,
-    full      => re.haplfifo.c.full,
-    wr_ack    => re.haplfifo.c.wr_ack,
-    overflow  => re.haplfifo.c.overflow,
-    empty     => re.haplfifo.c.empty,
-    valid     => re.haplfifo.c.valid,
-    underflow => re.haplfifo.c.underflow
+    srst        => haplfifo_reset,
+    wr_clk      => clk,
+    rd_clk      => re.clk_kernel,
+    din         => slv8bpslv3(r.hapl_data(7 downto 0)),
+    dout        => re.haplfifo.dout,
+    wr_en       => re.haplfifo.c.wr_en,
+    rd_en       => re.haplfifo.c.rd_en,
+    full        => re.haplfifo.c.full,
+    wr_ack      => re.haplfifo.c.wr_ack,
+    overflow    => re.haplfifo.c.overflow,
+    empty       => re.haplfifo.c.empty,
+    valid       => re.haplfifo.c.valid,
+    underflow   => re.haplfifo.c.underflow,
+    wr_rst_busy => re.haplfifo.c.wr_rst_busy,
+    rd_rst_busy => re.haplfifo.c.rd_rst_busy
     );
   re.haplfifo.c.wr_en <= r.hapl_wren(0);
 
@@ -1524,10 +1664,10 @@ begin
   re.pairhmm.i.first <= rs.pe_first;
 
   -- Base X for the first PE must come from the read FIFO or it must come from the feedback FIFO with a latency of 1
-  process(rs.ybus_addr1, rs.leny_init, rs.core_schedule1, readdelay)
+  process(rs.ybus_addr1, rs.leny_init, rs.core_schedule1, shift_read_r.delay)
   begin
     if(rs.ybus_addr1 < rs.leny_init and rs.basepair1 < rs.lenx) then
-      read_delay_n <= readdelay(PE_DEPTH - 1 - int(rs.core_schedule1));
+      read_delay_n <= shift_read_r.delay(PE_DEPTH - 1 - int(rs.core_schedule1));
     else
       read_delay_n <= BP_STOP;
     end if;
@@ -1545,13 +1685,13 @@ begin
 
   -- Data for Y bus
   ybus_data_sel : for J in 0 to PE_DEPTH - 1 generate
-    ybus_data_delay_n(J) <= hapldelay(PE_DEPTH - J - 1) when rs.ybus_addr1 < rs.leny else BP_STOP;
+    ybus_data_delay_n(J) <= shift_hapl_r.delay(PE_DEPTH - J - 1) when rs.ybus_addr1 < rs.leny else BP_STOP;
   end generate;
 
   process(re.clk_kernel)
   begin
     if(rising_edge(re.clk_kernel)) then
-      if(reset = '1') then
+      if(re.reset = '1') then
         read_delay <= BP_IGNORE;
       else
         read_delay      <= read_delay_n;
@@ -1564,7 +1704,9 @@ begin
   pairhmm_core : entity work.pairhmm port map (
     cr => re.pairhmm_cr,
     i  => re.pairhmm.i,
-    o  => re.pairhmm.o
+    o  => re.pairhmm.o,
+    resaccm => resaccm,
+    resacci => resacci
     );
 
   ---------------------------------------------------------------------------------------------------
@@ -1579,35 +1721,35 @@ begin
   ---------------------------------------------------------------------------------------------------
   -- Connect PAIRHMM inputs
 
-  process(probdelay, rs.schedule1)
+  process(shift_prob_r.delay, rs.schedule1)
   begin
-    in_posit_n.distm_simi <= probdelay(int(PE_DEPTH - 1 - rs.schedule1))(31 downto 0);
-    in_posit_n.distm_diff <= probdelay(int(PE_DEPTH - 1 - rs.schedule1))(63 downto 32);
-    in_posit_n.alpha      <= probdelay(int(PE_DEPTH - 1 - rs.schedule1))(95 downto 64);
-    in_posit_n.beta       <= probdelay(int(PE_DEPTH - 1 - rs.schedule1))(127 downto 96);
-    in_posit_n.delta      <= probdelay(int(PE_DEPTH - 1 - rs.schedule1))(159 downto 128);
-    in_posit_n.epsilon    <= probdelay(int(PE_DEPTH - 1 - rs.schedule1))(191 downto 160);
-    in_posit_n.zeta       <= probdelay(int(PE_DEPTH - 1 - rs.schedule1))(223 downto 192);
-    in_posit_n.eta        <= probdelay(int(PE_DEPTH - 1 - rs.schedule1))(255 downto 224);
+    in_posit_n.distm_simi <= shift_prob_r.delay(int(PE_DEPTH - 1 - rs.schedule1))(31 downto 0);
+    in_posit_n.distm_diff <= shift_prob_r.delay(int(PE_DEPTH - 1 - rs.schedule1))(63 downto 32);
+    in_posit_n.alpha      <= shift_prob_r.delay(int(PE_DEPTH - 1 - rs.schedule1))(95 downto 64);
+    in_posit_n.beta       <= shift_prob_r.delay(int(PE_DEPTH - 1 - rs.schedule1))(127 downto 96);
+    in_posit_n.delta      <= shift_prob_r.delay(int(PE_DEPTH - 1 - rs.schedule1))(159 downto 128);
+    in_posit_n.epsilon    <= shift_prob_r.delay(int(PE_DEPTH - 1 - rs.schedule1))(191 downto 160);
+    in_posit_n.zeta       <= shift_prob_r.delay(int(PE_DEPTH - 1 - rs.schedule1))(223 downto 192);
+    in_posit_n.eta        <= shift_prob_r.delay(int(PE_DEPTH - 1 - rs.schedule1))(255 downto 224);
   end process;
 
   process(re.clk_kernel)
   begin
     if(rising_edge(re.clk_kernel)) then
-      if(reset = '1') then
+      if(re.reset = '1') then
         in_posit               <= probabilities_empty;
         re.pairhmm_in1.en      <= '0';
         re.pairhmm_in1.valid   <= '0';
         re.pairhmm_in1.cell    <= PE_TOP;
-        re.pairhmm_in1.initial <= (others => '0');
+        re.pairhmm_in1.initial <= value_empty;
         re.pairhmm_in1.mids    <= mids_raw_empty;
-      else
-        in_posit               <= in_posit_n;
-        re.pairhmm_in1.en      <= re.pairhmm_in.en;
-        re.pairhmm_in1.valid   <= re.pairhmm_in.valid;
-        re.pairhmm_in1.cell    <= re.pairhmm_in.cell;
-        re.pairhmm_in1.initial <= re.pairhmm_in.initial;
-        re.pairhmm_in1.mids    <= re.pairhmm_in.mids;
+        else
+          in_posit               <= in_posit_n;
+          re.pairhmm_in1.en      <= re.pairhmm_in.en;
+          re.pairhmm_in1.valid   <= re.pairhmm_in.valid;
+          re.pairhmm_in1.cell    <= re.pairhmm_in.cell;
+          re.pairhmm_in1.initial <= re.pairhmm_in.initial;
+          re.pairhmm_in1.mids    <= re.pairhmm_in.mids;
       end if;
     end if;
   end process;
@@ -1741,24 +1883,42 @@ begin
   --                        | |
   --                        |_|
   ---------------------------------------------------------------------------------------------------
-  re.outfifo.din(31 downto 0) <= re.pairhmm.o.score;
-  re.outfifo.c.wr_en          <= re.pairhmm.o.score_valid;
+
+  process(re.clk_kernel)
+  begin
+      if rising_edge(re.clk_kernel) then
+
+            if(re.reset = '1') then
+              outfifo_in   <= (others => '0');
+              outfifo_wren <= '0';
+            else
+                outfifo_in   <= re.pairhmm.o.score;
+                outfifo_wren <= re.pairhmm.o.score_valid;
+            end if;
+    end if;
+  end process;
+
+  re.outfifo.din(31 downto 0) <= outfifo_in;
+  re.outfifo.c.wr_en          <= outfifo_wren;
+  re.outfifo.c.rd_en          <= cw_r.outfifo_read;
 
   outfifo : output_fifo
     port map (
-      wr_clk => re.clk_kernel,
-      rd_clk => clk,
-      din    => re.outfifo.din,
-      wr_en  => re.outfifo.c.wr_en,
-      rd_en  => re.outfifo.c.rd_en,
-
-      dout      => re.outfifo.dout,
-      full      => re.outfifo.c.full,
-      wr_ack    => re.outfifo.c.wr_ack,
-      overflow  => re.outfifo.c.overflow,
-      empty     => re.outfifo.c.empty,
-      valid     => re.outfifo.c.valid,
-      underflow => re.outfifo.c.underflow
+      srst        => re.reset,
+      wr_clk      => re.clk_kernel,
+      rd_clk      => clk,
+      din         => re.outfifo.din,
+      wr_en       => re.outfifo.c.wr_en,
+      rd_en       => re.outfifo.c.rd_en,
+      dout        => re.outfifo.dout,
+      full        => re.outfifo.c.full,
+      wr_ack      => re.outfifo.c.wr_ack,
+      overflow    => re.outfifo.c.overflow,
+      empty       => re.outfifo.c.empty,
+      valid       => re.outfifo.c.valid,
+      underflow   => re.outfifo.c.underflow,
+      wr_rst_busy => re.outfifo.c.wr_rst_busy,
+      rd_rst_busy => re.outfifo.c.rd_rst_busy
       );
 
   ---------------------------------------------------------------------------------------------------
@@ -1796,20 +1956,29 @@ begin
     full      => re.fbfifo.c.full,
     empty     => re.fbfifo.c.empty,
     overflow  => re.fbfifo.c.overflow,
-    underflow => re.fbfifo.c.underflow
+    underflow => re.fbfifo.c.underflow,
+    wr_rst_busy  => re.fbfifo.c.wr_rst_busy,
+    rd_rst_busy => re.fbfifo.c.rd_rst_busy
     );
+  -- re.fbfifo.dout <= (others => '0');
+  -- re.fbfifo.c.wr_ack <= '1';
+  -- re.fbfifo.c.valid <= '1';
+  -- re.fbfifo.c.full <= '0';
+  -- re.fbfifo.c.empty <= '0';
+  -- re.fbfifo.c.overflow <= '0';
+  -- re.fbfifo.c.underflow <= '0';
 
-  re.fbpairhmm.mids.ml         <= re.fbfifo.dout(37 downto 0);
-  re.fbpairhmm.mids.il         <= re.fbfifo.dout(75 downto 38);
-  re.fbpairhmm.mids.dl         <= re.fbfifo.dout(113 downto 76);
-  re.fbpairhmm.emis.distm_simi <= re.fbfifo.dout(151 downto 114);
-  re.fbpairhmm.emis.distm_diff <= re.fbfifo.dout(189 downto 152);
-  re.fbpairhmm.tmis.alpha      <= re.fbfifo.dout(227 downto 190);
-  re.fbpairhmm.tmis.beta       <= re.fbfifo.dout(265 downto 228);
-  re.fbpairhmm.tmis.delta      <= re.fbfifo.dout(303 downto 266);
-  re.fbpairhmm.tmis.epsilon    <= re.fbfifo.dout(341 downto 304);
-  re.fbpairhmm.tmis.zeta       <= re.fbfifo.dout(379 downto 342);
-  re.fbpairhmm.tmis.eta        <= re.fbfifo.dout(417 downto 380);
+  re.fbpairhmm.mids.ml         <= re.fbfifo.dout(37 downto 0);  -- "00111111111111111111111111111111111100";   -- DEBUG: FEEDBACK CANARY
+  re.fbpairhmm.mids.il         <= re.fbfifo.dout(75 downto 38);  -- "00111111111111111111111111111111111100";
+  re.fbpairhmm.mids.dl         <= re.fbfifo.dout(113 downto 76);  -- "00111111111111111111111111111111111100";
+  re.fbpairhmm.emis.distm_simi <= re.fbfifo.dout(151 downto 114);  -- "00111111111111111111111111111111111100";
+  re.fbpairhmm.emis.distm_diff <= re.fbfifo.dout(189 downto 152);  -- "00111111111111111111111111111111111100";
+  re.fbpairhmm.tmis.alpha      <= re.fbfifo.dout(227 downto 190);  -- "00111111111111111111111111111111111100";
+  re.fbpairhmm.tmis.beta       <= re.fbfifo.dout(265 downto 228);  -- "00111111111111111111111111111111111100";
+  re.fbpairhmm.tmis.delta      <= re.fbfifo.dout(303 downto 266);  -- "00111111111111111111111111111111111100";
+  re.fbpairhmm.tmis.epsilon    <= re.fbfifo.dout(341 downto 304);  -- "00111111111111111111111111111111111100";
+  re.fbpairhmm.tmis.zeta       <= re.fbfifo.dout(379 downto 342);  -- "00111111111111111111111111111111111100";
+  re.fbpairhmm.tmis.eta        <= re.fbfifo.dout(417 downto 380);  -- "00111111111111111111111111111111111100";
   re.fbpairhmm.x               <= slv3bp(re.fbfifo.dout(420 downto 418));
   re.fbpairhmm.initial         <= re.fbfifo.dout(458 downto 421);
 
@@ -1845,7 +2014,7 @@ begin
   -- This implements a round-robin scheduler to fill pipeline stage n with the output of FIFO n
   ---------------------------------------------------------------------------------------------------
 
-  scheduler_comb : process(r, re, rs, read_delay_valid)
+  scheduler_comb : process(r, re, rs, shift_read_r.valid, shift_prob_r.valid, shift_hapl_r.valid)
     variable vs : cu_sched;
   begin
 --------------------------------------------------------------------------------------------------- default assignments
@@ -1879,6 +2048,7 @@ begin
     vs.valid1          := rs.valid;
     vs.cycle1          := rs.cycle;
     vs.basepair1       := rs.basepair;
+    vs.basepair2       := rs.basepair1;
 
 --------------------------------------------------------------------------------------------------- round robin schedule
     -- Schedule is always running, this is to keep the PairHMM core running even when the scheduler
@@ -1925,13 +2095,9 @@ begin
 
         vs.haplfifo_reset := '0';
 
-        vs.shift_read_buffer := '0';
-        vs.shift_prob_buffer := '0';
-        vs.shift_hapl_buffer := '0';
-
         -- Start everything when the FIFO's are filled and align with the scheduler
         -- Starting up takes two cycles, thus we wait until the scheduler is at PE_DEPTH - 2.
-        if r.filled = '1' and rs.schedule1 = PE_DEPTH - 2 and read_delay_valid = '1' then
+        if r.filled = '1' and rs.schedule1 = PE_DEPTH - 2 and shift_read_r.valid = '1' and shift_prob_r.valid = '1' and shift_hapl_r.valid = '1' then
           vs.state        := SCHED_STARTUP;
           vs.feedback_rst := '0';
           vs.pairhmm_rst  := '0';
@@ -1956,26 +2122,20 @@ begin
 
         -- Increase PairHMM cycle, except when this is the first cycle, which we can check by looking at the last bit of fifo_rd_en
         -- Everything inside this if statement is triggered when a new cell update cycle starts
-        if rs.schedule1 = u(PE_DEPTH - 5, PE_DEPTH_BITS) and rs.startflag = '0' and rs.ybus_addr1 < rs.leny-1 then
+        if rs.schedule1 = u(PE_DEPTH - 3, PE_DEPTH_BITS) and rs.startflag = '0' and rs.ybus_addr1 < rs.leny-1 then
           vs.shift_prob_buffer := '1';
           if rs.cell = PE_BOTTOM then
             vs.shift_hapl_buffer := '1';
           end if;
         end if;
 
-        if rs.schedule1 = u(PE_DEPTH - 4, PE_DEPTH_BITS) and rs.startflag = '0' and rs.ybus_addr1 < rs.leny-1 then
+        if rs.schedule1 = u(PE_DEPTH - 2, PE_DEPTH_BITS) and rs.startflag = '0' and rs.ybus_addr1 < rs.leny-1 then
           vs.shift_prob_buffer := '0';
           vs.shift_read_buffer := '1';
 
           if rs.element /= PAIRHMM_NUM_PES - 1 then
             vs.shift_hapl_buffer := '1';
           end if;
-        end if;
-
-        if rs.schedule1 = u(PE_DEPTH - 3, PE_DEPTH_BITS) and rs.startflag = '0' then
-          vs.shift_read_buffer := '0';
-          vs.shift_hapl_buffer := '0';
-          vs.shift_prob_buffer := '0';
         end if;
 
         if rs.schedule1 = u(PE_DEPTH - 1, PE_DEPTH_BITS) and rs.startflag = '0' then
@@ -2067,15 +2227,172 @@ begin
   scheduler_reg : process(re.clk_kernel)
   begin
     if rising_edge(re.clk_kernel) then
-      if reset = '1' then
-        rs.state       <= SCHED_IDLE;
-        rs.pe_first    <= pe_in_empty;
-        rs.schedule    <= (others => '0');
-        rs.pairhmm_rst <= '1';
+        if re.reset = '1' then
+          rs.state          <= SCHED_IDLE;
+          rs.pe_first       <= pe_in_empty;
+          rs.schedule       <= (others => '0');
+          rs.schedule1      <= (others => '0');
+          rs.pairhmm_rst    <= '1';
+          rs.feedback_rst   <= '1';
+          rs.startflag      <= '0';
+          rs.cell           <= PE_NORMAL;
+          rs.valid          <= '0';
+          rs.cycle          <= (others => '0');
+          rs.ybus_en        <= '0';
+          rs.basepair       <= (others => '0');
+          rs.element        <= (others => '0');
+          rs.supercolumn    <= (others => '0');
+          rs.feedback_rd_en <= '0';
+          rs.feedback_wr_en <= '0';
+          rs.feedback_rst   <= '1';
       else
-        rs <= qs;
+          rs <= qs;
       end if;
     end if;
   end process;
+
+  y_data_vec <= bp32slv3(ybus_data_delay);
+
+  process(re.clk_kernel)
+  begin
+      if rising_edge(re.clk_kernel) then
+          resaccm_n <= resaccm;
+          resacci_n <= resacci;
+      end if;
+  end process;
+
+  -- DEBUG REGISTER CONTROL
+  debug_reg : process(re.clk_kernel)
+  begin
+    if rising_edge(re.clk_kernel) then
+      if re.reset = '1' then
+        r_debug <= (others => (others => '0'));
+      else
+        -- STICKY BITS
+        if re.readfifo.c.underflow = '1' then
+          r_debug(0)(0) <= '1';
+        end if;
+        if re.readfifo.c.overflow = '1' then
+          r_debug(0)(1) <= '1';
+        end if;
+        if re.readfifo.c.full = '1' then
+          r_debug(0)(2) <= '1';
+        end if;
+        if re.probfifo.c.underflow = '1' then
+          r_debug(0)(3) <= '1';
+        end if;
+        if re.probfifo.c.overflow = '1' then
+          r_debug(0)(4) <= '1';
+        end if;
+        if re.probfifo.c.full = '1' then
+          r_debug(0)(5) <= '1';
+        end if;
+        if re.haplfifo.c.underflow = '1' then
+          r_debug(0)(6) <= '1';
+        end if;
+        if re.haplfifo.c.overflow = '1' then
+          r_debug(0)(7) <= '1';
+        end if;
+        if re.haplfifo.c.full = '1' then
+          r_debug(0)(8) <= '1';
+        end if;
+        if re.fbfifo.c.rd_en = '1' then
+          r_debug(0)(9) <= '1';
+        end if;
+        if rs.shift_read_buffer = '1' and re.readfifo.c.rd_rst_busy = '1' then
+            r_debug(0)(10) <= '1';
+        end if;
+        if rs.shift_prob_buffer = '1' and re.probfifo.c.rd_rst_busy = '1' then
+            r_debug(0)(11) <= '1';
+        end if;
+        if rs.shift_hapl_buffer = '1' and re.haplfifo.c.rd_rst_busy = '1' then
+            r_debug(0)(12) <= '1';
+        end if;
+        r_debug(0)(31 downto 13) <= (others => '0');
+
+        if rs.basepair1 = 8 and re.pairhmm.i.first.valid = '1' then
+          r_debug(1)(31 downto 0) <= y_data_vec(47 downto 16);
+        end if;
+        if rs.basepair1 = 15 and re.pairhmm.i.first.valid = '1' then
+          r_debug(2)(31 downto 0) <= y_data_vec(47 downto 16);
+        end if;
+
+        -- PE(0) PE_NORMAL X0 X1 X2 X3 X4 X5 X6 X7 X8 X9
+        if re.pairhmm.i.schedule = 0 and rs.basepair2 = 8 and re.pairhmm.i.first.valid = '1' then
+           r_debug(3)(31 downto 29) <= bpslv3(re.pairhmm.i.x);
+        end if;
+        if re.pairhmm.i.schedule = 1 and rs.basepair2 = 8 and re.pairhmm.i.first.valid = '1' then
+           r_debug(3)(28 downto 26) <= bpslv3(re.pairhmm.i.x);
+        end if;
+        if re.pairhmm.i.schedule = 2 and rs.basepair2 = 8 and re.pairhmm.i.first.valid = '1' then
+           r_debug(3)(25 downto 23) <= bpslv3(re.pairhmm.i.x);
+        end if;
+        if re.pairhmm.i.schedule = 3 and rs.basepair2 = 8 and re.pairhmm.i.first.valid = '1' then
+           r_debug(3)(22 downto 20)  <= bpslv3(re.pairhmm.i.x);
+        end if;
+        if re.pairhmm.i.schedule = 4 and rs.basepair2 = 8 and re.pairhmm.i.first.valid = '1' then
+           r_debug(3)(19 downto 17)   <= bpslv3(re.pairhmm.i.x);
+        end if;
+        if re.pairhmm.i.schedule = 5 and rs.basepair2 = 8 and re.pairhmm.i.first.valid = '1' then
+           r_debug(3)(16 downto 14)   <= bpslv3(re.pairhmm.i.x);
+        end if;
+        if re.pairhmm.i.schedule = 6 and rs.basepair2 = 8 and re.pairhmm.i.first.valid = '1' then
+           r_debug(3)(13 downto 11)   <= bpslv3(re.pairhmm.i.x);
+        end if;
+        if re.pairhmm.i.schedule = 7 and rs.basepair2 = 8 and re.pairhmm.i.first.valid = '1' then
+           r_debug(3)(10 downto 8)   <= bpslv3(re.pairhmm.i.x);
+        end if;
+        if re.pairhmm.i.schedule = 8 and rs.basepair2 = 8 and re.pairhmm.i.first.valid = '1' then
+           r_debug(3)(7 downto 5)   <= bpslv3(re.pairhmm.i.x);
+        end if;
+        if re.pairhmm.i.schedule = 9 and rs.basepair2 = 8 and re.pairhmm.i.first.valid = '1' then
+           r_debug(3)(4 downto 2)   <= bpslv3(re.pairhmm.i.x);
+        end if;
+        r_debug(3)(1 downto 0)   <= (others => '0');
+
+        if re.pairhmm.i.schedule = 0 and rs.basepair2 = 15 and re.pairhmm.i.first.valid = '1' then
+           r_debug(4)(31 downto 29) <= bpslv3(re.pairhmm.i.x);
+        end if;
+        if re.pairhmm.i.schedule = 1 and rs.basepair2 = 15 and re.pairhmm.i.first.valid = '1' then
+           r_debug(4)(28 downto 26) <= bpslv3(re.pairhmm.i.x);
+        end if;
+        if re.pairhmm.i.schedule = 2 and rs.basepair2 = 15 and re.pairhmm.i.first.valid = '1' then
+           r_debug(4)(25 downto 23) <= bpslv3(re.pairhmm.i.x);
+        end if;
+        if re.pairhmm.i.schedule = 3 and rs.basepair2 = 15 and re.pairhmm.i.first.valid = '1' then
+           r_debug(4)(22 downto 20)  <= bpslv3(re.pairhmm.i.x);
+        end if;
+        if re.pairhmm.i.schedule = 4 and rs.basepair2 = 15 and re.pairhmm.i.first.valid = '1' then
+           r_debug(4)(19 downto 17)   <= bpslv3(re.pairhmm.i.x);
+        end if;
+        if re.pairhmm.i.schedule = 5 and rs.basepair2 = 15 and re.pairhmm.i.first.valid = '1' then
+           r_debug(4)(16 downto 14)   <= bpslv3(re.pairhmm.i.x);
+        end if;
+        if re.pairhmm.i.schedule = 6 and rs.basepair2 = 15 and re.pairhmm.i.first.valid = '1' then
+           r_debug(4)(13 downto 11)   <= bpslv3(re.pairhmm.i.x);
+        end if;
+        if re.pairhmm.i.schedule = 7 and rs.basepair2 = 15 and re.pairhmm.i.first.valid = '1' then
+           r_debug(4)(10 downto 8)   <= bpslv3(re.pairhmm.i.x);
+        end if;
+        if re.pairhmm.i.schedule = 8 and rs.basepair2 = 15 and re.pairhmm.i.first.valid = '1' then
+           r_debug(4)(7 downto 5)   <= bpslv3(re.pairhmm.i.x);
+        end if;
+        if re.pairhmm.i.schedule = 9 and rs.basepair2 = 15 and re.pairhmm.i.first.valid = '1' then
+           r_debug(4)(4 downto 2)   <= bpslv3(re.pairhmm.i.x);
+        end if;
+        r_debug(4)(1 downto 0)   <= (others => '0');
+
+        if resaccm_n /= x"00000000" and re.pairhmm.o.last.valid = '1' and r_debug(5) = x"00000000" then
+            r_debug(5) <= resaccm_n;
+        end if;
+        if resacci_n /= x"00000000" and re.pairhmm.o.last.valid = '1' and r_debug(6) = x"00000000" then
+            r_debug(6) <= resacci_n;
+        end if;
+      end if;
+    end if;
+  end process;
+
+
+
 
 end pairhmm_unit;

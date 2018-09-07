@@ -35,6 +35,9 @@ package cu_snap_package is
     rst    : std_logic;
     rd_rst : std_logic;
     wr_rst : std_logic;
+
+    wr_rst_busy : std_logic;
+    rd_rst_busy : std_logic;
   end record;
 
   type outfifo_item is record
@@ -120,7 +123,7 @@ package cu_snap_package is
 
     state               : cu_sched_state;  -- State of the scheduler process
     cycle, cycle1       : unsigned(CU_CYCLE_BITS - 1 downto 0);  -- This must be able to hold up to PAIRHMM_MAX_SIZE / PE_DEPTH * 2 * PAIRHMM_MAX_SIZE-1
-    basepair, basepair1 : unsigned(log2e(PAIRHMM_MAX_SIZE) downto 0);  -- This must be able to hold up to PAIRHMM_MAX_SIZE-1 but is 1 larger to compare to size array values
+    basepair, basepair1, basepair2 : unsigned(log2e(PAIRHMM_MAX_SIZE) downto 0);  -- This must be able to hold up to PAIRHMM_MAX_SIZE-1 but is 1 larger to compare to size array values
     element             : unsigned(log2e(PAIRHMM_NUM_PES) downto 0);  -- This must be able to hold PAIRHMM_NUM_PES-1
     schedule, schedule1 : unsigned(PE_DEPTH_BITS - 1 downto 0);  -- To hold the pair that is currently scheduled
     supercolumn         : unsigned(log2e(PAIRHMM_MAX_SIZE / PAIRHMM_NUM_PES) downto 0);  -- To keep track in which group of columns we are
@@ -164,6 +167,7 @@ package cu_snap_package is
     cycle1            => (others => '0'),
     basepair          => (others => '0'),
     basepair1         => (others => '0'),
+    basepair2         => (others => '0'),
     element           => (others => '0'),
     schedule          => (others => '0'),
     schedule1         => (others => '0'),
@@ -207,6 +211,8 @@ package cu_snap_package is
   constant CYCLE_ZERO : unsigned(CU_CYCLE_BITS-1 downto 0) := usign(0, CU_CYCLE_BITS);
 
   type cu_ext is record
+    reset : std_logic;
+
     pairhmm_cr              : cr_in;
     pairhmm                 : pairhmm_item;
     pairhmm_in, pairhmm_in1 : pe_in;
@@ -233,6 +239,21 @@ package cu_snap_package is
       );
   end component;
 
+  component xd_pulse_xfer is
+    generic (
+      ACTIVE_RESET     : std_logic := '1';   -- active level of reset input
+      ACTIVE_IN        : std_logic := '1';   -- active level of input pulse
+      ACTIVE_OUT       : std_logic := '1'    -- active level of output pulse
+    );
+    port (
+      reset            : in  std_logic;
+      clk_a            : in  std_logic;
+      pulse_in         : in  std_logic;
+      clk_b            : in  std_logic;
+      pulse_out        : out std_logic
+    );
+  end component;
+
 end package cu_snap_package;
 
 package body cu_snap_package is
@@ -247,6 +268,7 @@ package body cu_snap_package is
 
     r.hapl_wren <= "0";
     r.read_wren <= "0";
+    r.prob_wren <= '0';
 
     r.read_data <= (others => '0');
     r.prob_data <= (others => '0');

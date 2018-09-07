@@ -54,6 +54,7 @@
 
 (* DowngradeIPIdentifiedWarnings = "yes" *)
 module output_fifo (
+  srst,
   wr_clk,
   rd_clk,
   din,
@@ -65,13 +66,16 @@ module output_fifo (
   overflow,
   empty,
   valid,
-  underflow
+  underflow,
+  wr_rst_busy,
+  rd_rst_busy
 );
 
-(* X_INTERFACE_PARAMETER = "XIL_INTERFACENAME write_clk, FREQ_HZ 100000000, PHASE 0.000" *)
+input wire srst;
+(* X_INTERFACE_PARAMETER = "XIL_INTERFACENAME write_clk, FREQ_HZ 125000000, PHASE 0.000" *)
 (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 write_clk CLK" *)
 input wire wr_clk;
-(* X_INTERFACE_PARAMETER = "XIL_INTERFACENAME read_clk, FREQ_HZ 100000000, PHASE 0.000" *)
+(* X_INTERFACE_PARAMETER = "XIL_INTERFACENAME read_clk, FREQ_HZ 250000000, PHASE 0.000" *)
 (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 read_clk CLK" *)
 input wire rd_clk;
 (* X_INTERFACE_INFO = "xilinx.com:interface:fifo_write:1.0 FIFO_WRITE WR_DATA" *)
@@ -90,6 +94,8 @@ output wire overflow;
 output wire empty;
 output wire valid;
 output wire underflow;
+output wire wr_rst_busy;
+output wire rd_rst_busy;
 
   fifo_generator_v13_2_1 #(
     .C_COMMON_CLOCK(0),
@@ -113,35 +119,35 @@ output wire underflow;
     .C_HAS_RD_DATA_COUNT(0),
     .C_HAS_RD_RST(0),
     .C_HAS_RST(0),
-    .C_HAS_SRST(0),
+    .C_HAS_SRST(1),
     .C_HAS_UNDERFLOW(1),
     .C_HAS_VALID(1),
     .C_HAS_WR_ACK(1),
     .C_HAS_WR_DATA_COUNT(0),
     .C_HAS_WR_RST(0),
-    .C_IMPLEMENTATION_TYPE(2),
+    .C_IMPLEMENTATION_TYPE(6),
     .C_INIT_WR_PNTR_VAL(0),
-    .C_MEMORY_TYPE(1),
+    .C_MEMORY_TYPE(4),
     .C_MIF_FILE_NAME("BlankString"),
     .C_OPTIMIZATION_MODE(0),
     .C_OVERFLOW_LOW(0),
-    .C_PRELOAD_LATENCY(0),
+    .C_PRELOAD_LATENCY(2),
     .C_PRELOAD_REGS(1),
     .C_PRIM_FIFO_TYPE("1kx36"),
-    .C_PROG_EMPTY_THRESH_ASSERT_VAL(4),
-    .C_PROG_EMPTY_THRESH_NEGATE_VAL(5),
+    .C_PROG_EMPTY_THRESH_ASSERT_VAL(5),
+    .C_PROG_EMPTY_THRESH_NEGATE_VAL(6),
     .C_PROG_EMPTY_TYPE(0),
-    .C_PROG_FULL_THRESH_ASSERT_VAL(4095),
-    .C_PROG_FULL_THRESH_NEGATE_VAL(4094),
+    .C_PROG_FULL_THRESH_ASSERT_VAL(4092),
+    .C_PROG_FULL_THRESH_NEGATE_VAL(4091),
     .C_PROG_FULL_TYPE(0),
     .C_RD_DATA_COUNT_WIDTH(12),
     .C_RD_DEPTH(4096),
-    .C_RD_FREQ(1),
+    .C_RD_FREQ(250),
     .C_RD_PNTR_WIDTH(12),
     .C_UNDERFLOW_LOW(0),
-    .C_USE_DOUT_RST(0),
+    .C_USE_DOUT_RST(1),
     .C_USE_ECC(0),
-    .C_USE_EMBEDDED_REG(0),
+    .C_USE_EMBEDDED_REG(1),
     .C_USE_PIPELINE_REG(0),
     .C_POWER_SAVING_MODE(0),
     .C_USE_FIFO16_FLAGS(0),
@@ -150,7 +156,7 @@ output wire underflow;
     .C_WR_ACK_LOW(0),
     .C_WR_DATA_COUNT_WIDTH(12),
     .C_WR_DEPTH(4096),
-    .C_WR_FREQ(1),
+    .C_WR_FREQ(125),
     .C_WR_PNTR_WIDTH(12),
     .C_WR_RESPONSE_LATENCY(1),
     .C_MSGON_VAL(1),
@@ -299,7 +305,7 @@ output wire underflow;
     .backup_marker(1'D0),
     .clk(1'D0),
     .rst(1'D0),
-    .srst(1'D0),
+    .srst(srst),
     .wr_clk(wr_clk),
     .wr_rst(1'D0),
     .rd_clk(rd_clk),
@@ -333,8 +339,8 @@ output wire underflow;
     .prog_empty(),
     .sbiterr(),
     .dbiterr(),
-    .wr_rst_busy(),
-    .rd_rst_busy(),
+    .wr_rst_busy(wr_rst_busy),
+    .rd_rst_busy(rd_rst_busy),
     .m_aclk(1'D0),
     .s_aclk(1'D0),
     .s_aresetn(1'D0),

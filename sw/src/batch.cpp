@@ -69,12 +69,12 @@ void fill_batch(t_batch& batch, string& x_string, string& y_string, int batch_nu
     for (int i = 0; i < xp + x - 1; i++) {
         srand((i) * xp + x * 9949 + y * 9133); // Seed number generator
 
-        eta[i] = random_number(0.5, 0.1); //cout << x_string[batch_num * (xp + x - 1) + i] << " - " << hexstring(eta[i].collect()) << endl;
+        eta[i] = random_number(0.5, 0.1);
         zeta[i] = random_number(0.125, 0.05);
         epsilon[i] = random_number(0.5, 0.1);
         delta[i] = random_number(0.125, 0.05);
         beta[i] = random_number(0.5, 0.1);
-        alpha[i] = random_number(0.125, 0.05);
+        alpha[i] = random_number(0.125, 0.05);cout << x_string[batch_num * (xp + x - 1) + i] << " - " << hexstring(alpha[i].collect()) << endl;
         distm_diff[i] = random_number(0.5, 0.1);
         distm_simi[i] = random_number(0.125, 0.05);
 
@@ -87,9 +87,11 @@ void fill_batch(t_batch& batch, string& x_string, string& y_string, int batch_nu
         // distm_diff[i].set_raw_bits((getProb(x_string[batch_num * (xp + x - 1) + i])));
         // distm_simi[i].set_raw_bits((getProb(x_string[batch_num * (xp + x - 1) + i])));
     }
-    // cout << endl;
+    cout << endl;
 
     posit<NBITS, ES> initial_posit(initial / yp);
+
+    cout << "INITIAL: "  << hexstring(initial_posit.collect()) << endl;
 
     // Get raw bits to send to HW
     for(int k = 0; k < PIPE_DEPTH; k++) {

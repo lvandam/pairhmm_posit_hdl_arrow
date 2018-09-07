@@ -154,9 +154,11 @@ architecture arrow_pairhmm of arrow_pairhmm is
   --   8 x size          & y size        =  16
   --   8 x padded size   & y padded size =  16
   --   8 x_bppadded      & initial       =  16
+  ----
+  --   8 test registers                 =  8
   -----------------------------------
-  -- Total:                          112 regs
-  constant NUM_FLETCHER_REGS : natural := 112;
+  -- Total:                          120 regs
+  constant NUM_FLETCHER_REGS : natural := 120;
 
   -- The LSB index in the slave address
   constant SLV_ADDR_LSB : natural := log2floor(SLV_BUS_DATA_WIDTH / 4) - 1;
@@ -232,6 +234,8 @@ architecture arrow_pairhmm of arrow_pairhmm is
   constant REG_BPP_SIZE : natural := 96;
   constant REG_INITIAL  : natural := 104;
 
+  constant REG_DEBUG  : natural := 112;
+
   -- The offsets of the bits to signal busy and done for each of the units
   constant STATUS_BUSY_OFFSET : natural := 0;
   constant STATUS_DONE_OFFSET : natural := CORES;
@@ -268,6 +272,7 @@ architecture arrow_pairhmm of arrow_pairhmm is
   -- Registers
   -----------------------------------------------------------------------------
   type reg_array_t is array (0 to CORES-1) of std_logic_vector(31 downto 0);
+  type reg_array_debug_t is array (0 to 7) of std_logic_vector(31 downto 0);
 
   -- Haplotypes buffer addresses
   signal reg_array_hapl_off_hi, reg_array_hapl_off_lo : reg_array_t;
@@ -291,6 +296,7 @@ architecture arrow_pairhmm of arrow_pairhmm is
   signal reg_array_xp_size, reg_array_yp_size : reg_array_t;
   signal reg_array_bpp_size                   : reg_array_t;
   signal reg_array_initial                    : reg_array_t;
+  signal reg_array_debug : reg_array_debug_t;
 
   signal bit_array_control_reset : std_logic_vector(CORES-1 downto 0);
   signal bit_array_control_start : std_logic_vector(CORES-1 downto 0);
@@ -392,6 +398,15 @@ begin
       -- Return registers
       mm_regs(REG_RETURN_HI) <= (others => '0');
       mm_regs(REG_RETURN_LO) <= (others => '1');
+
+      mm_regs(REG_DEBUG+0) <= reg_array_debug(0);
+      mm_regs(REG_DEBUG+1) <= reg_array_debug(1);
+      mm_regs(REG_DEBUG+2) <= reg_array_debug(2);
+      mm_regs(REG_DEBUG+3) <= reg_array_debug(3);
+      mm_regs(REG_DEBUG+4) <= reg_array_debug(4);
+      mm_regs(REG_DEBUG+5) <= reg_array_debug(5);
+      mm_regs(REG_DEBUG+6) <= reg_array_debug(6);
+      mm_regs(REG_DEBUG+7) <= reg_array_debug(7);
 
       if reset_n = '0' then
         mm_regs(REG_CONTROL_LO) <= (others => '0');
@@ -656,6 +671,16 @@ begin
         y_padded   => reg_array_yp_size (I),
         x_bppadded => reg_array_bpp_size (I),
         initial    => reg_array_initial (I),
+
+        -- Debug
+        debug0 => reg_array_debug(0),
+        debug1 => reg_array_debug(1),
+        debug2 => reg_array_debug(2),
+        debug3 => reg_array_debug(3),
+        debug4 => reg_array_debug(4),
+        debug5 => reg_array_debug(5),
+        debug6 => reg_array_debug(6),
+        debug7 => reg_array_debug(7),
 
         ---------------------------------------------------------------------------
         -- Master bus Haplotypes
