@@ -238,7 +238,7 @@ architecture pairhmm_unit of pairhmm_unit is
     signal str_hapl_elem_in : out str_hapl_elem_in_t
     ) is
   begin
-    str_hapl_elem_in.len.data   <= data (INDEX_WIDTH_HAPL-1 downto 0);
+    str_hapl_elem_in.len.data   <= data (INDEX_WIDTH_HAPL - 1 downto 0);
     str_hapl_elem_in.len.valid  <= valid (0);
     str_hapl_elem_in.len.dvalid <= dvalid(0);
     str_hapl_elem_in.len.last   <= last (0);
@@ -530,13 +530,13 @@ architecture pairhmm_unit of pairhmm_unit is
   end record;
 
   type reg_shift_baseprob is record
-    state : state_shift_t;
-    reset : std_logic;
-    rd_en : std_logic;
-    count : integer range 0 to 63;
+    state                 : state_shift_t;
+    reset                 : std_logic;
+    rd_en                 : std_logic;
+    count                 : integer range 0 to 63;
     valid, valid1, valid2 : std_logic;
 
-    probdelay : probdelay_type;
+    probdelay                         : probdelay_type;
     readdelay, readdelay1, readdelay2 : basedelay_type;
   end record;
 
@@ -571,6 +571,7 @@ architecture pairhmm_unit of pairhmm_unit is
   signal outfifo_wren : std_logic;
 
   signal resaccm, resacci, resaccm_n, resacci_n : std_logic_vector(31 downto 0);
+  signal scorecnt                               : integer range 0 to 31 := 0;
 
   signal cnt_readprob, cnt_hapl, cnt_output : integer range 0 to 40 := 0;
 begin
@@ -951,7 +952,8 @@ begin
                         re.haplfifo.c.empty, re.haplfifo.c.wr_rst_busy,
                         -- re.readfifo.c.wr_rst_busy,
                         -- re.probfifo.c.wr_rst_busy,
-                        re.readprobfifo.c.wr_rst_busy,
+                        shift_readprob_r.valid2, shift_hapl_r.valid,
+                        re.readprobfifo.c.empty, re.readprobfifo.c.wr_rst_busy,
                         re.outfifo.c.wr_rst_busy, re.outfifo.c.rd_rst_busy,
                         r_hapl_off_hi, r_hapl_off_lo,
                         r_read_off_hi, r_read_off_lo,
@@ -1033,8 +1035,7 @@ begin
 
       when LOAD_RESET_FIFO =>
         if re.haplfifo.c.empty = '1'
-          -- and re.readfifo.c.wr_rst_busy = '0'
-          -- and re.probfifo.c.wr_rst_busy = '0'
+          and re.readprobfifo.c.empty = '1'
           and re.readprobfifo.c.wr_rst_busy = '0'
           and re.haplfifo.c.wr_rst_busy = '0'
           and re.outfifo.c.wr_rst_busy = '0'
@@ -1047,7 +1048,6 @@ begin
         -- Reset all counters etc...
         v.x_reads := (others => '0');
         v.y_reads := (others => '0');
-        v.p_reads := (others => '0');
         v.filled  := '0';
 
         -- ColumnReader
@@ -1122,7 +1122,6 @@ begin
         -- Store the bases of the read and the corresponding haplotypes in the FIFO
         if r.x_reads /= r.inits.x_padded + r.inits.x_len - 1 and cr_r.str_read_elem_in.data.valid = '1' then
           v.x_reads := r.x_reads + 1;
-          v.p_reads := r.p_reads + 1;
 
           v.readprob_wren := '1';
           v.read_data     := cr_r.str_read_elem_in.data.bp(7 downto 0);
@@ -1136,7 +1135,6 @@ begin
                          & cr_r.str_read_elem_in.data.prob.distm_simi;
         else
           v.x_reads := r.x_reads;
-          v.p_reads := r.p_reads;
 
           v.readprob_wren := '0';
           v.read_data     := (others => '1');
@@ -1146,10 +1144,8 @@ begin
         -- If all (padded) bases of all reads and haplotypes are completely loaded,
         -- and if we have loaded all the (padded) probabilities of the batch into the FIFO's
         -- go to the next state to load the next batch information
-
-        if r.x_reads = r.inits.x_padded + r.inits.x_len - 1 and r.y_reads = r.inits.y_padded + r.inits.y_len - 1 and r.p_reads = r.inits.x_padded + r.inits.x_len - 1 then
+        if r.x_reads = r.inits.x_padded + r.inits.x_len - 1 and r.y_reads = r.inits.y_padded + r.inits.y_len - 1 then
           v.wed.batches := r.wed.batches - 1;
-          v.p_reads     := (others => '0');
           v.state       := LOAD_LOADNEXTINIT;
         end if;
 
@@ -1189,7 +1185,7 @@ begin
         end if;
 
         -- If the scheduler is idle
-        if rs.state = SCHED_IDLE and v.state /= LOAD_DONE then
+        if rs.state = SCHED_IDLE and v.state /= LOAD_DONE and shift_readprob_r.valid2 = '1' and shift_hapl_r.valid = '1' then
           -- We can signal the scheduler to start processing:
           v.filled := '1';
         end if;
@@ -1376,26 +1372,23 @@ begin
   shift_seq : process(re.clk_kernel) is
   begin
     if rising_edge(re.clk_kernel) then
-      -- shift_read_r <= shift_read_d;
-      -- shift_prob_r <= shift_prob_d;
       shift_readprob_r <= shift_readprob_d;
       shift_hapl_r     <= shift_hapl_d;
 
       shift_readprob_r.readdelay1 <= shift_readprob_r.readdelay;
       shift_readprob_r.readdelay2 <= shift_readprob_r.readdelay1;
-
-      shift_readprob_r.valid1 <= shift_readprob_r.valid;
-      shift_readprob_r.valid2 <= shift_readprob_r.valid1;
+      shift_readprob_r.valid1     <= shift_readprob_r.valid;
+      shift_readprob_r.valid2     <= shift_readprob_r.valid1;
 
       if re.reset = '1' then
-        shift_readprob_r.state     <= IDLE;
-        shift_readprob_r.rd_en     <= '0';
-        shift_readprob_r.reset     <= '1';
-        shift_readprob_r.count     <= 0;
-        shift_readprob_r.valid     <= '0';
+        shift_readprob_r.state      <= IDLE;
+        shift_readprob_r.rd_en      <= '0';
+        shift_readprob_r.reset      <= '1';
+        shift_readprob_r.count      <= 0;
+        shift_readprob_r.valid      <= '0';
         shift_readprob_r.valid1     <= '0';
         shift_readprob_r.valid2     <= '0';
-        shift_readprob_r.readdelay <= (others => BP_IGNORE);
+        shift_readprob_r.readdelay  <= (others => BP_IGNORE);
         shift_readprob_r.readdelay1 <= (others => BP_IGNORE);
         shift_readprob_r.readdelay2 <= (others => BP_IGNORE);
         for K in 0 to PE_DEPTH - 1 loop
@@ -1412,7 +1405,7 @@ begin
     end if;
   end process;
 
-  shift_readprob_comb : process(r, shift_readprob_r, re.readprobfifo.c.empty, re.readprobfifo.c.rd_rst_busy, re.readprobfifo.c.valid, re.readprobfifo.dout, rs.shift_readprob_buffer, rs.readprob_delay_rst)
+  shift_readprob_comb : process(r, re, rs, shift_readprob_r)
     variable shift_v : reg_shift_baseprob;
   begin
     shift_v := shift_readprob_r;
@@ -1429,7 +1422,7 @@ begin
       when IDLE =>
         shift_v.state := IDLE;
         shift_v.valid := '0';
-        if r.filled = '1' then
+        if re.readprobfifo.c.empty = '0' and re.readprobfifo.c.rd_rst_busy = '0' then
           shift_v.state := SHIFT;
         end if;
 
@@ -1442,11 +1435,11 @@ begin
 
         -- Determine read enable
         if re.readprobfifo.c.empty = '0' and re.readprobfifo.c.rd_rst_busy = '0' then
-            -- Not Empty, Not Valid, No Pending Read -> Read if we have space
-            if shift_readprob_r.count < PE_DEPTH then
-              shift_v.rd_en := '1';
-              shift_v.state := SHIFT_NEW;
-            end if;
+          -- Not Empty, Not Valid, No Pending Read -> Read if we have space
+          if shift_readprob_r.count < PE_DEPTH then
+            shift_v.rd_en := '1';
+            shift_v.state := SHIFT_NEW;
+          end if;
         end if;
 
         if rs.readprob_delay_rst = '1' then
@@ -1490,7 +1483,7 @@ begin
     re.readprobfifo.c.rd_en <= shift_v.rd_en;
   end process;
 
-  shift_hapl_comb : process(r, shift_hapl_r, re.haplfifo.c.empty, re.haplfifo.c.rd_rst_busy, re.haplfifo.c.valid, re.haplfifo.dout, rs.shift_hapl_buffer, rs.hapl_delay_rst)
+  shift_hapl_comb : process(r, re, rs, shift_hapl_r)
     variable shift_v : reg_shift_base;
   begin
     shift_v := shift_hapl_r;
@@ -1507,7 +1500,7 @@ begin
       when IDLE =>
         shift_v.state := IDLE;
         shift_v.valid := '0';
-        if r.filled = '1' then
+        if re.haplfifo.c.empty = '0' and re.haplfifo.c.rd_rst_busy = '0' then
           shift_v.state := SHIFT;
         end if;
 
@@ -1520,11 +1513,11 @@ begin
 
         -- Determine read enable
         if(re.haplfifo.c.empty = '0' and re.haplfifo.c.rd_rst_busy = '0') then
-            -- Not Empty, Not Valid, No Pending Read -> Read if we have space
-            if shift_hapl_r.count < PE_DEPTH then
-              shift_v.rd_en := '1';
-              shift_v.state := SHIFT_NEW;
-            end if;
+          -- Not Empty, Not Valid, No Pending Read -> Read if we have space
+          if shift_hapl_r.count < PE_DEPTH then
+            shift_v.rd_en := '1';
+            shift_v.state := SHIFT_NEW;
+          end if;
         end if;
 
         if rs.hapl_delay_rst = '1' then
@@ -1634,8 +1627,6 @@ begin
   begin
     if rising_edge(re.clk_kernel) then
       if re.reset = '1' or rs.readprob_delay_rst = '1' then
-        -- read_delay <= BP_IGNORE;
-        -- ybus_data_delay <= pe_y_data_empty;
         del_r.state      <= X_IDLE;
         del_r.read_delay <= BP_STOP;
       else
@@ -1719,22 +1710,25 @@ begin
   ---------------------------------------------------------------------------------------------------
   -- Connect PAIRHMM inputs
 
-  process(shift_readprob_r.probdelay, rs.schedule)
-  begin
-    in_posit_n.distm_simi <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(31 downto 0);
-    in_posit_n.distm_diff <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(63 downto 32);
-    in_posit_n.alpha      <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(95 downto 64);
-    in_posit_n.beta       <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(127 downto 96);
-    in_posit_n.delta      <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(159 downto 128);
-    in_posit_n.epsilon    <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(191 downto 160);
-    in_posit_n.zeta       <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(223 downto 192);
-    in_posit_n.eta        <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(255 downto 224);
-  end process;
+  -- TODO Laurens
+  -- process(shift_readprob_r.probdelay, rs.schedule)
+  -- begin
+  --   in_posit_n.distm_simi <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(31 downto 0);
+  --   in_posit_n.distm_diff <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(63 downto 32);
+  --   in_posit_n.alpha      <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(95 downto 64);
+  --   in_posit_n.beta       <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(127 downto 96);
+  --   in_posit_n.delta      <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(159 downto 128);
+  --   in_posit_n.epsilon    <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(191 downto 160);
+  --   in_posit_n.zeta       <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(223 downto 192);
+  --   in_posit_n.eta        <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(255 downto 224);
+  -- end process;
 
   process(re.clk_kernel)
   begin
     if(rising_edge(re.clk_kernel)) then
       if(re.reset = '1') then
+        in_posit <= probabilities_empty;
+
         re.pairhmm_in1.en      <= '0';
         re.pairhmm_in1.valid   <= '0';
         re.pairhmm_in1.cell    <= PE_TOP;
@@ -1743,7 +1737,15 @@ begin
         re.pairhmm_in1.emis    <= emis_raw_empty;
         re.pairhmm_in1.tmis    <= tmis_raw_empty;
       else
-        in_posit       <= in_posit_n;
+        in_posit.distm_simi <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(31 downto 0);
+        in_posit.distm_diff <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(63 downto 32);
+        in_posit.alpha      <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(95 downto 64);
+        in_posit.beta       <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(127 downto 96);
+        in_posit.delta      <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(159 downto 128);
+        in_posit.epsilon    <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(191 downto 160);
+        in_posit.zeta       <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(223 downto 192);
+        in_posit.eta        <= shift_readprob_r.probdelay(int(PE_DEPTH - 1 - rs.schedule))(255 downto 224);
+
         re.pairhmm_in1 <= re.pairhmm_in;
       end if;
     end if;
@@ -2001,7 +2003,7 @@ begin
   -- This implements a round-robin scheduler to fill pipeline stage n with the output of FIFO n
   ---------------------------------------------------------------------------------------------------
 
-  scheduler_comb : process(r, re, rs, shift_readprob_r.valid, shift_hapl_r.valid)
+  scheduler_comb : process(r, re, rs, shift_readprob_r.valid2, shift_hapl_r.valid)
     variable vs : cu_sched;
   begin
 --------------------------------------------------------------------------------------------------- default assignments
@@ -2009,8 +2011,6 @@ begin
 
     vs.ybus_en := '0';
 
-    -- vs.shift_read_buffer := '0';
-    -- vs.shift_prob_buffer := '0';
     vs.shift_readprob_buffer := '0';
     vs.shift_hapl_buffer     := '0';
 
@@ -2047,12 +2047,10 @@ begin
     vs.schedule := rs.schedule + 1;
 
     -- Wrap around (required when log2(PE_DEPTH) is not an integer
-    if rs.schedule = PE_DEPTH-1 then
+    if rs.schedule = PE_DEPTH - 1 then
       vs.schedule := (others => '0');
     end if;
 
-    -- vs.read_delay_rst := '0';
-    -- vs.prob_delay_rst := '0';
     vs.readprob_delay_rst := '0';
     vs.hapl_delay_rst     := '0';
 
@@ -2086,7 +2084,7 @@ begin
 
         -- Start everything when the FIFO's are filled and align with the scheduler
         -- Starting up takes two cycles, thus we wait until the scheduler is at PE_DEPTH - 2.
-        if r.filled = '1' and rs.schedule1 = PE_DEPTH - 2 and shift_readprob_r.valid2 = '1' and shift_hapl_r.valid = '1' then  --shift_read_r.valid = '1' and shift_prob_r.valid = '1'
+        if r.filled = '1' and rs.schedule1 = PE_DEPTH - 2 and shift_readprob_r.valid2 = '1' and shift_hapl_r.valid = '1' then
           vs.state        := SCHED_STARTUP;
           vs.feedback_rst := '0';
           vs.pairhmm_rst  := '0';
@@ -2132,10 +2130,9 @@ begin
         end if;
 
         if rs.schedule1 = u(PE_DEPTH - 1, PE_DEPTH_BITS) and rs.startflag = '0' then
-          vs.cycle                 := rs.cycle + 1;  -- Increase the total cycle counter
-          vs.basepair              := rs.basepair + 1;  -- Increase the counter of Y
-          -- vs.shift_read_buffer := '0';
-          -- vs.shift_prob_buffer := '0';
+          vs.cycle    := rs.cycle + 1;     -- Increase the total cycle counter
+          vs.basepair := rs.basepair + 1;  -- Increase the counter of Y
+
           vs.shift_readprob_buffer := '0';
           vs.shift_hapl_buffer     := '0';
 
@@ -2256,6 +2253,14 @@ begin
     if rising_edge(re.clk_kernel) then
       resaccm_n <= resaccm;
       resacci_n <= resacci;
+
+      if re.pairhmm.o.score_valid = '1' then
+        scorecnt <= scorecnt + 1;
+      end if;
+
+      if re.reset = '1' then
+        scorecnt <= 0;
+      end if;
     end if;
   end process;
 
@@ -2282,9 +2287,9 @@ begin
   begin
     if rising_edge(re.clk_kernel) then
       if re.reset = '1' then
-        r_debug <= (others => (others => '0'));
-        resacc_m_cnt            := 0;
-        resacc_i_cnt            := 0;
+        r_debug      <= (others => (others => '0'));
+        resacc_m_cnt := 0;
+        resacc_i_cnt := 0;
       else
         -- STICKY BITS
         if re.readprobfifo.c.underflow = '1' then
@@ -2333,12 +2338,13 @@ begin
         end if;
         r_debug(0)(31 downto 19) <= (others => '0');
 
-        if rs.basepair1 = 0 and re.pairhmm.i.first.valid = '1' then
-          r_debug(1)(31 downto 0) <= y_data_vec(47 downto 16);
+        if re.pairhmm.o.score_valid = '1' and scorecnt = 0 then
+          r_debug(1)(31 downto 0) <= re.pairhmm.o.score;
         end if;
-        if rs.basepair1 = 1 and re.pairhmm.i.first.valid = '1' then
-          r_debug(2)(31 downto 0) <= y_data_vec(47 downto 16);
+        if re.pairhmm.o.score_valid = '1' and scorecnt = 1 then
+          r_debug(2)(31 downto 0) <= re.pairhmm.o.score;
         end if;
+
         --
         -- PE(0) PE_NORMAL X0 X1 X2 X3 X4 X5 X6 X7 X8 X9
         if re.pairhmm.i.schedule = 0 and rs.basepair2 = 0 and re.pairhmm.i.first.valid = '1' then
@@ -2429,16 +2435,16 @@ begin
         r_debug(3)(1 downto 0) <= (others => '0');
 
         if rs.basepair1 = 7 and re.pairhmm.i.first.valid = '1' then
-          r_debug(12)(31 downto 0) <= y_data_vec(47 downto 16); -- TODO Laurens check this before submit/before build
+          r_debug(12)(31 downto 0) <= y_data_vec(47 downto 16);  -- TODO Laurens check this before submit/before build
         end if;
         if rs.basepair1 = 8 and re.pairhmm.i.first.valid = '1' then
           r_debug(13)(31 downto 0) <= y_data_vec(47 downto 16);
         end if;
 
-        if r.filled = '1' and rs.schedule1 = PE_DEPTH - 2 and shift_readprob_r.valid = '1' and shift_hapl_r.valid = '1' and r_debug(14) = x"00000000" then
+        if r.filled = '1' and rs.schedule1 = PE_DEPTH - 2 and shift_readprob_r.valid2 = '1' and shift_hapl_r.valid = '1' and r_debug(14) = x"00000000" then
           r_debug(14)(31 downto 0) <= std_logic_vector(to_unsigned(cnt_readprob, 32));
         end if;
-        if r.filled = '1' and rs.schedule1 = PE_DEPTH - 2 and shift_readprob_r.valid = '1' and shift_hapl_r.valid = '1' and r_debug(15) = x"00000000" then
+        if r.filled = '1' and rs.schedule1 = PE_DEPTH - 2 and shift_readprob_r.valid2 = '1' and shift_hapl_r.valid = '1' and r_debug(15) = x"00000000" then
           r_debug(15)(31 downto 0) <= std_logic_vector(to_unsigned(cnt_hapl, 32));
         end if;
 
@@ -2500,8 +2506,5 @@ begin
       end if;
     end if;
   end process;
-
-
-
 
 end pairhmm_unit;
