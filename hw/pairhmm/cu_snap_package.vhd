@@ -64,6 +64,12 @@ package cu_snap_package is
     c    : fifo_controls;
   end record;
 
+  type baseprobfifo_item is record
+    din  : std_logic_vector(3 + PAIRHMM_BITS_PER_PROB - 1 downto 0);
+    dout : std_logic_vector(3 + PAIRHMM_BITS_PER_PROB - 1 downto 0);
+    c    : fifo_controls;
+  end record;
+
   type cu_state is (
     LOAD_IDLE,
     LOAD_RESET_START,
@@ -98,9 +104,10 @@ package cu_snap_package is
     x_reads : unsigned(15 downto 0);
     p_reads : unsigned(15 downto 0);
 
-    hapl_wren : std_logic_vector(0 downto 0);
-    read_wren : std_logic_vector(0 downto 0);
-    prob_wren : std_logic;
+    readprob_wren : std_logic;
+    hapl_wren : std_logic;
+    -- read_wren : std_logic_vector(0 downto 0);
+    -- prob_wren : std_logic;
 
     hapl_data : std_logic_vector(7 downto 0);
     read_data : std_logic_vector(7 downto 0);
@@ -150,15 +157,17 @@ package cu_snap_package is
 
     core_schedule, core_schedule1, core_schedule2 : unsigned(PE_DEPTH_BITS-1 downto 0);
 
-    shift_read_buffer : std_logic;
+    -- shift_read_buffer : std_logic;
+    -- shift_prob_buffer : std_logic;
+    shift_readprob_buffer : std_logic;
     shift_hapl_buffer : std_logic;
-    shift_prob_buffer : std_logic;
 
     haplfifo_reset : std_logic;
 
-    read_delay_rst : std_logic;
+    -- read_delay_rst : std_logic;
+    -- prob_delay_rst : std_logic;
+    readprob_delay_rst : std_logic;
     hapl_delay_rst : std_logic;
-    prob_delay_rst : std_logic;
   end record;
 
   constant cu_sched_empty : cu_sched := (
@@ -199,13 +208,15 @@ package cu_snap_package is
     core_schedule     => (others => '0'),
     core_schedule1    => (others => '0'),
     core_schedule2    => (others => '0'),
-    shift_read_buffer => '0',
+    -- shift_read_buffer => '0',
+    -- shift_prob_buffer => '0',
+    shift_readprob_buffer => '0',
     shift_hapl_buffer => '0',
-    shift_prob_buffer => '0',
     haplfifo_reset    => '0',
-    read_delay_rst    => '0',
-    hapl_delay_rst    => '0',
-    prob_delay_rst    => '0'
+    -- read_delay_rst    => '0',
+    -- prob_delay_rst    => '0',
+    readprob_delay_rst    => '0',
+    hapl_delay_rst    => '0'
     );
 
   constant CYCLE_ZERO : unsigned(CU_CYCLE_BITS-1 downto 0) := usign(0, CU_CYCLE_BITS);
@@ -220,8 +231,9 @@ package cu_snap_package is
     fbfifo                  : fbfifo_item;
 
     haplfifo : basefifo_item;
-    readfifo : basefifo_item;
-    probfifo : probfifo_item;
+    readprobfifo : baseprobfifo_item;
+    -- readfifo : basefifo_item;
+    -- probfifo : probfifo_item;
 
     fbpairhmm, fbpairhmm1 : pe_in;
     clk_kernel            : std_logic;
@@ -266,9 +278,10 @@ package body cu_snap_package is
     r.y_reads <= (others => '0');
     r.p_reads <= (others => '0');
 
-    r.hapl_wren <= "0";
-    r.read_wren <= "0";
-    r.prob_wren <= '0';
+    -- r.read_wren <= "0";
+    -- r.prob_wren <= '0';
+    r.readprob_wren <= '0';
+    r.hapl_wren <= '0'; --r.hapl_wren <= "0";
 
     r.read_data <= (others => '0');
     r.prob_data <= (others => '0');

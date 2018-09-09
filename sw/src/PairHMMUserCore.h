@@ -39,12 +39,12 @@
 #define REG_Y_OFFSET 36
 
 #define REG_XP_OFFSET 40
-#define REG_YP_OFFSET 44
+#define REG_YP_OFFSET 41
 
-#define REG_XBPP_OFFSET 48
-#define REG_INITIAL_OFFSET 52
+#define REG_XBPP_OFFSET 42
+#define REG_INITIAL_OFFSET 43
 
-#define REG_DEBUG 56
+#define REG_DEBUG 44
 
 /**
  * \class PairHMMUserCore

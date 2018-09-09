@@ -273,7 +273,7 @@ int main(int argc, char ** argv)
 
         // Get debug registers
         cout << "DEBUG REGISTERS CONTENTS:" << endl;
-        for(int i = 0; i < 4; i++) {
+        for(int i = 0; i < 8; i++) {
             uint32_t debug0, debug1;
             addr_lohi val;
             platform->read_mmio(REG_DEBUG + i, &val.full);
@@ -281,8 +281,8 @@ int main(int argc, char ** argv)
             debug0 = val.half.hi;
             debug1 = val.half.lo;
 
-            cout << i*2   << ": " << hex << debug0 << endl;
-            cout << i*2+1 << ": " << hex << debug1 << endl;
+            cout << dec << i*2   << ": " << hex << debug0 << endl;
+            cout << dec << i*2+1 << ": " << hex << debug1 << endl;
         }
         cout << endl;
 

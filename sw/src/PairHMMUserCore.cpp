@@ -77,23 +77,25 @@ void PairHMMUserCore::set_batch_init(std::vector<uint32_t>& batch_length, std::v
         reg.half.hi = init[2 * i].y_size;
         reg.half.lo = init[2 * i + 1].y_size;
         this->platform()->write_mmio(REG_Y_OFFSET + i, reg.full);
-
-        reg.half.hi = init[2 * i].x_padded;
-        reg.half.lo = init[2 * i + 1].x_padded;
-        this->platform()->write_mmio(REG_XP_OFFSET + i, reg.full);
-
-        reg.half.hi = init[2 * i].y_padded;
-        reg.half.lo = init[2 * i + 1].y_padded;
-        this->platform()->write_mmio(REG_YP_OFFSET + i, reg.full);
-
-        reg.half.hi = init[2 * i].x_bppadded;
-        reg.half.lo = init[2 * i + 1].x_bppadded;
-        this->platform()->write_mmio(REG_XBPP_OFFSET + i, reg.full);
-
-        reg.half.hi = init[2 * i].initials[0];
-        reg.half.lo = init[2 * i + 1].initials[0];
-        this->platform()->write_mmio(REG_INITIAL_OFFSET + i, reg.full);
     }
+
+    reg_conv_t reg;
+    
+    reg.half.hi = init[2 * 0].x_padded;
+    reg.half.lo = init[2 * 0 + 1].x_padded;
+    this->platform()->write_mmio(REG_XP_OFFSET + 0, reg.full);
+
+    reg.half.hi = init[2 * 0].y_padded;
+    reg.half.lo = init[2 * 0 + 1].y_padded;
+    this->platform()->write_mmio(REG_YP_OFFSET + 0, reg.full);
+
+    reg.half.hi = init[2 * 0].x_bppadded;
+    reg.half.lo = init[2 * 0 + 1].x_bppadded;
+    this->platform()->write_mmio(REG_XBPP_OFFSET + 0, reg.full);
+
+    reg.half.hi = init[2 * 0].initials[0];
+    reg.half.lo = init[2 * 0 + 1].initials[0];
+    this->platform()->write_mmio(REG_INITIAL_OFFSET + 0, reg.full);
 }
 
 void PairHMMUserCore::control_zero()

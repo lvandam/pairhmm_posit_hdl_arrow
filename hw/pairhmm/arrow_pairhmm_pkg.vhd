@@ -294,6 +294,14 @@ package arrow_pairhmm_pkg is
       debug5 : out std_logic_vector(REG_WIDTH-1 downto 0);
       debug6 : out std_logic_vector(REG_WIDTH-1 downto 0);
       debug7 : out std_logic_vector(REG_WIDTH-1 downto 0);
+      debug8 : out std_logic_vector(REG_WIDTH-1 downto 0);
+      debug9 : out std_logic_vector(REG_WIDTH-1 downto 0);
+      debug10 : out std_logic_vector(REG_WIDTH-1 downto 0);
+      debug11 : out std_logic_vector(REG_WIDTH-1 downto 0);
+      debug12 : out std_logic_vector(REG_WIDTH-1 downto 0);
+      debug13 : out std_logic_vector(REG_WIDTH-1 downto 0);
+      debug14 : out std_logic_vector(REG_WIDTH-1 downto 0);
+      debug15 : out std_logic_vector(REG_WIDTH-1 downto 0);
 
       -- Batch information
       batches    : in std_logic_vector(REG_WIDTH-1 downto 0);
@@ -443,15 +451,15 @@ package arrow_pairhmm_pkg is
       );
   end component;
 
-  component prob_fifo is
+  component baseprob_fifo is
     port (
       srst        : in  std_logic;
       wr_clk      : in  std_logic;
       rd_clk      : in  std_logic;
-      din         : in  std_logic_vector (255 downto 0);
+      din         : in  std_logic_vector (3 + 255 downto 0);
       wr_en       : in  std_logic;
       rd_en       : in  std_logic;
-      dout        : out std_logic_vector (255 downto 0);
+      dout        : out std_logic_vector (3 + 255 downto 0);
       full        : out std_logic;
       wr_ack      : out std_logic;
       overflow    : out std_logic;
@@ -462,6 +470,26 @@ package arrow_pairhmm_pkg is
       rd_rst_busy : out std_logic
       );
   end component;
+
+  -- component prob_fifo is
+  --   port (
+  --     srst        : in  std_logic;
+  --     wr_clk      : in  std_logic;
+  --     rd_clk      : in  std_logic;
+  --     din         : in  std_logic_vector (255 downto 0);
+  --     wr_en       : in  std_logic;
+  --     rd_en       : in  std_logic;
+  --     dout        : out std_logic_vector (255 downto 0);
+  --     full        : out std_logic;
+  --     wr_ack      : out std_logic;
+  --     overflow    : out std_logic;
+  --     empty       : out std_logic;
+  --     valid       : out std_logic;
+  --     underflow   : out std_logic;
+  --     wr_rst_busy : out std_logic;
+  --     rd_rst_busy : out std_logic
+  --     );
+  -- end component;
 
 end package;
 
