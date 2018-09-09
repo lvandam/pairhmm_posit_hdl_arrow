@@ -77,6 +77,7 @@ package cu_snap_package is
     LOAD_RESET_FIFO,
     LOAD_REQUEST_DATA,
     LOAD_LOADX_LOADY,
+    LOAD_PAD,
     LOAD_LOADNEXTINIT,
     LOAD_LAUNCH,
     LOAD_DONE
