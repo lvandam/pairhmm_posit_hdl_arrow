@@ -2433,81 +2433,82 @@ begin
         end if;
         r_debug(3)(1 downto 0) <= (others => '0');
 
-        if re.pairhmm.i.schedule = 0 and rs.basepair2 = 0 and re.pairhmm.i.first.valid = '1' then
+        if re.pairhmm.i.schedule = 0 and rs.basepair2 = 10 and re.pairhmm.i.first.valid = '1' then
           r_debug(4)(31 downto 0) <= re.pairhmm.i.first.tmis.alpha(37 downto 6);
         end if;
-        if re.pairhmm.i.schedule = 0 and rs.basepair2 = 1 and re.pairhmm.i.first.valid = '1' then
+        if re.pairhmm.i.schedule = 0 and rs.basepair2 = 11 and re.pairhmm.i.first.valid = '1' then
           r_debug(5)(31 downto 0) <= re.pairhmm.i.first.tmis.alpha(37 downto 6);
         end if;
-        if re.pairhmm.i.schedule = 0 and rs.basepair2 = 2 and re.pairhmm.i.first.valid = '1' then
-          r_debug(6)(31 downto 0) <= re.pairhmm.i.first.tmis.alpha(37 downto 6);
-        end if;
-        if re.pairhmm.i.schedule = 0 and rs.basepair2 = 3 and re.pairhmm.i.first.valid = '1' then
-          r_debug(7)(31 downto 0) <= re.pairhmm.i.first.tmis.alpha(37 downto 6);
-        end if;
-        if re.pairhmm.i.schedule = 0 and rs.basepair2 = 4 and re.pairhmm.i.first.valid = '1' then
-          r_debug(8)(31 downto 0) <= re.pairhmm.i.first.tmis.alpha(37 downto 6);
-        end if;
+        -- if re.pairhmm.i.schedule = 0 and rs.basepair2 = 2 and re.pairhmm.i.first.valid = '1' then
+        --   r_debug(6)(31 downto 0) <= re.pairhmm.i.first.tmis.alpha(37 downto 6);
+        -- end if;
+        -- if re.pairhmm.i.schedule = 0 and rs.basepair2 = 3 and re.pairhmm.i.first.valid = '1' then
+        --   r_debug(7)(31 downto 0) <= re.pairhmm.i.first.tmis.alpha(37 downto 6);
+        -- end if;
+        -- if re.pairhmm.i.schedule = 0 and rs.basepair2 = 4 and re.pairhmm.i.first.valid = '1' then
+        --   r_debug(8)(31 downto 0) <= re.pairhmm.i.first.tmis.alpha(37 downto 6);
+        -- end if;
 
         --
         -- PE(0) PE_NORMAL X0 X1 X2 X3 X4 X5 X6 X7 X8 X9
         if re.pairhmm.i.schedule = 0 and rs.basepair2 = 7 and re.pairhmm.i.first.valid = '1' then
-          r_debug(5)(31 downto 29) <= bpslv3(re.pairhmm.i.x);
+          r_debug(15)(31 downto 29) <= bpslv3(re.pairhmm.i.x);
         end if;
         if re.pairhmm.i.schedule = 1 and rs.basepair2 = 7 and re.pairhmm.i.first.valid = '1' then
-          r_debug(5)(28 downto 26) <= bpslv3(re.pairhmm.i.x);
+          r_debug(15)(28 downto 26) <= bpslv3(re.pairhmm.i.x);
         end if;
         if re.pairhmm.i.schedule = 2 and rs.basepair2 = 7 and re.pairhmm.i.first.valid = '1' then
-          r_debug(5)(25 downto 23) <= bpslv3(re.pairhmm.i.x);
+          r_debug(15)(25 downto 23) <= bpslv3(re.pairhmm.i.x);
         end if;
         if re.pairhmm.i.schedule = 3 and rs.basepair2 = 7 and re.pairhmm.i.first.valid = '1' then
-          r_debug(5)(22 downto 20) <= bpslv3(re.pairhmm.i.x);
+          r_debug(15)(22 downto 20) <= bpslv3(re.pairhmm.i.x);
         end if;
         if re.pairhmm.i.schedule = 4 and rs.basepair2 = 7 and re.pairhmm.i.first.valid = '1' then
-          r_debug(5)(19 downto 17) <= bpslv3(re.pairhmm.i.x);
+          r_debug(15)(19 downto 17) <= bpslv3(re.pairhmm.i.x);
         end if;
         if re.pairhmm.i.schedule = 5 and rs.basepair2 = 7 and re.pairhmm.i.first.valid = '1' then
-          r_debug(5)(16 downto 14) <= bpslv3(re.pairhmm.i.x);
+          r_debug(15)(16 downto 14) <= bpslv3(re.pairhmm.i.x);
         end if;
         if re.pairhmm.i.schedule = 6 and rs.basepair2 = 7 and re.pairhmm.i.first.valid = '1' then
-          r_debug(5)(13 downto 11) <= bpslv3(re.pairhmm.i.x);
+          r_debug(15)(13 downto 11) <= bpslv3(re.pairhmm.i.x);
         end if;
         if re.pairhmm.i.schedule = 7 and rs.basepair2 = 7 and re.pairhmm.i.first.valid = '1' then
-          r_debug(5)(10 downto 8) <= bpslv3(re.pairhmm.i.x);
+          r_debug(15)(10 downto 8) <= bpslv3(re.pairhmm.i.x);
         end if;
         if re.pairhmm.i.schedule = 8 and rs.basepair2 = 7 and re.pairhmm.i.first.valid = '1' then
-          r_debug(5)(7 downto 5) <= bpslv3(re.pairhmm.i.x);
+          r_debug(15)(7 downto 5) <= bpslv3(re.pairhmm.i.x);
         end if;
         if re.pairhmm.i.schedule = 9 and rs.basepair2 = 7 and re.pairhmm.i.first.valid = '1' then
-          r_debug(5)(4 downto 2) <= bpslv3(re.pairhmm.i.x);
+          r_debug(15)(4 downto 2) <= bpslv3(re.pairhmm.i.x);
         end if;
-        r_debug(5)(1 downto 0) <= (others => '0');
+        r_debug(15)(1 downto 0) <= (others => '0');
 
-        if rs.basepair1 = 0 and re.pairhmm.i.first.valid = '1' then
+
+        if re.pairhmm.i.ybus.wren = '1' and re.pairhmm.i.ybus.addr = 3 then
           r_debug(6)(31 downto 0) <= y_data_vec(47 downto 16);  -- TODO Laurens check this before submit/before build
         end if;
-        if rs.basepair1 = 1 and re.pairhmm.i.first.valid = '1' then
+        if re.pairhmm.i.ybus.wren = '1' and re.pairhmm.i.ybus.addr = 4 then
           r_debug(7)(31 downto 0) <= y_data_vec(47 downto 16);
         end if;
-        if rs.basepair1 = 2 and re.pairhmm.i.first.valid = '1' then
+        if re.pairhmm.i.ybus.wren = '1' and re.pairhmm.i.ybus.addr = 5 then
           r_debug(8)(31 downto 0) <= y_data_vec(47 downto 16);
         end if;
-        if rs.basepair1 = 3 and re.pairhmm.i.first.valid = '1' then
+        if re.pairhmm.i.ybus.wren = '1' and re.pairhmm.i.ybus.addr = 6 then
           r_debug(9)(31 downto 0) <= y_data_vec(47 downto 16);  -- TODO Laurens check this before submit/before build
         end if;
-        if rs.basepair1 = 4 and re.pairhmm.i.first.valid = '1' then
+        if re.pairhmm.i.ybus.wren = '1' and re.pairhmm.i.ybus.addr = 7 then
           r_debug(10)(31 downto 0) <= y_data_vec(47 downto 16);  -- TODO Laurens check this before submit/before build
         end if;
-        if rs.basepair1 = 5 and re.pairhmm.i.first.valid = '1' then
+        if re.pairhmm.i.ybus.wren = '1' and re.pairhmm.i.ybus.addr = 8 then
           r_debug(11)(31 downto 0) <= y_data_vec(47 downto 16);
         end if;
-        if rs.basepair1 = 6 and re.pairhmm.i.first.valid = '1' then
+        if re.pairhmm.i.ybus.wren = '1' and re.pairhmm.i.ybus.addr = 9 then
           r_debug(12)(31 downto 0) <= y_data_vec(47 downto 16);
         end if;
-        if rs.basepair1 = 7 and re.pairhmm.i.first.valid = '1' then
-          r_debug(13)(31 downto 0) <= y_data_vec(47 downto 16);
+        if re.pairhmm.i.ybus.wren = '1' and re.pairhmm.i.ybus.addr = 9 then
+          r_debug(13)(15 downto 0) <= y_data_vec(15 downto 0);
         end if;
-        if rs.basepair1 = 8 and re.pairhmm.i.first.valid = '1' then
+        if re.pairhmm.i.ybus.wren = '1' and re.pairhmm.i.ybus.addr = 10 then
           r_debug(14)(31 downto 0) <= y_data_vec(47 downto 16);
         end if;
 
