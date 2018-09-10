@@ -245,27 +245,36 @@ package cu_snap_package is
   function slvec (a : in integer; b : in natural) return std_logic_vector;
   function slvec (a : in unsigned) return std_logic_vector;
 
-  component psl_to_kernel is
-    port (
-      clk_psl    : in  std_logic;
-      clk_kernel : out std_logic
-      );
+  component clk_div
+  port
+   (-- Clock in ports
+    -- Clock out ports
+    clk_out1          : out    std_logic;
+    clk_in1           : in     std_logic
+   );
   end component;
 
-  component xd_pulse_xfer is
-    generic (
-      ACTIVE_RESET     : std_logic := '1';   -- active level of reset input
-      ACTIVE_IN        : std_logic := '1';   -- active level of input pulse
-      ACTIVE_OUT       : std_logic := '1'    -- active level of output pulse
-    );
-    port (
-      reset            : in  std_logic;
-      clk_a            : in  std_logic;
-      pulse_in         : in  std_logic;
-      clk_b            : in  std_logic;
-      pulse_out        : out std_logic
-    );
-  end component;
+  -- component psl_to_kernel is
+  --   port (
+  --     clk_psl    : in  std_logic;
+  --     clk_kernel : out std_logic
+  --     );
+  -- end component;
+  --
+  -- component xd_pulse_xfer is
+  --   generic (
+  --     ACTIVE_RESET     : std_logic := '1';   -- active level of reset input
+  --     ACTIVE_IN        : std_logic := '1';   -- active level of input pulse
+  --     ACTIVE_OUT       : std_logic := '1'    -- active level of output pulse
+  --   );
+  --   port (
+  --     reset            : in  std_logic;
+  --     clk_a            : in  std_logic;
+  --     pulse_in         : in  std_logic;
+  --     clk_b            : in  std_logic;
+  --     pulse_out        : out std_logic
+  --   );
+  -- end component;
 
 end package cu_snap_package;
 

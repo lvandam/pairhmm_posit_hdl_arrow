@@ -576,25 +576,25 @@ architecture pairhmm_unit of pairhmm_unit is
 begin
   reset <= not reset_n;
 
-  process(clk)
-    variable waiting : std_logic := '0';
-  begin
-    if rising_edge(clk) then
-      if reset = '1' then
-        re.reset <= '1';
-        waiting  := '0';
-      end if;
-
-      if re.reset = '1' and reset = '0' then
-        if waiting = '0' then
-          waiting := '1';
-        else
-          waiting  := '0';
-          re.reset <= '0';
-        end if;
-      end if;
-    end if;
-  end process;
+  -- process(clk)
+  --   variable waiting : std_logic := '0';
+  -- begin
+  --   if rising_edge(clk) then
+  --     if reset = '1' then
+  --       re.reset <= '1';
+  --       waiting  := '0';
+  --     end if;
+  --
+  --     if re.reset = '1' and reset = '0' then
+  --       if waiting = '0' then
+  --         waiting := '1';
+  --       else
+  --         waiting  := '0';
+  --         re.reset <= '0';
+  --       end if;
+  --     end if;
+  --   end if;
+  -- end process;
 
   -----------------------------------------------------------------------------
   -----------------------------------------------------------------------------
@@ -791,9 +791,9 @@ begin
       )
     port map (
       bus_clk   => clk,
-      bus_reset => reset,
+      bus_reset => cr_r.reset_units,
       acc_clk   => clk,
-      acc_reset => reset,
+      acc_reset => cr_r.reset_units,
 
       cmd_valid    => result_cmd_valid,
       cmd_ready    => result_cmd_ready,
@@ -851,7 +851,7 @@ begin
   process(clk)
   begin
     if(rising_edge(clk)) then
-      if reset = '1' then
+      if r_control_reset = '1' then
         cnt_readprob <= 0;
         cnt_hapl     <= 0;
       else
@@ -929,7 +929,7 @@ begin
       debug14 <= r_debug(14);
       debug15 <= r_debug(15);
 
-      if control_reset = '1' or reset = '1' then
+      if r_control_reset = '1' then
         r_control_start  <= '0';
         cu_reset(r);
         cr_r.reset_units <= '1';
@@ -1242,7 +1242,7 @@ begin
       cw_r <= cw_d;
 
       -- Reset
-      if reset = '1' then
+      if r_control_reset = '1' then
         cw_r.state          <= IDLE;
         cw_r.cs.reset_start <= '0';
         cw_r.cs.busy        <= '0';
@@ -1403,7 +1403,7 @@ begin
       shift_readprob_r.valid1     <= shift_readprob_r.valid;
       shift_readprob_r.valid2     <= shift_readprob_r.valid1;
 
-      if re.reset = '1' then
+      if r_control_reset = '1' then
         shift_readprob_r.state      <= IDLE;
         shift_readprob_r.rd_en      <= '0';
         shift_readprob_r.reset      <= '1';
@@ -1654,10 +1654,14 @@ begin
   --  \_____| |_|  \___/   \___| |_|\_\
   ---------------------------------------------------------------------------------------------------
   -- In case the kernel has to run slower due to timing constraints not being met, use this to lower the clock frequency
-  kernel_clock_gen : psl_to_kernel port map (
-    clk_psl    => clk,
-    clk_kernel => re.clk_kernel
-    );
+  -- kernel_clock_gen : psl_to_kernel port map (
+  --   clk_psl    => clk,
+  --   clk_kernel => re.clk_kernel
+  --   );
+    kernel_clock_gen : clk_div port map (
+      clk_in1    => clk,
+      clk_out1   => re.clk_kernel
+      );
 
   ---------------------------------------------------------------------------------------------------
   --     _____           _        _ _
@@ -1680,7 +1684,7 @@ begin
   process(re.clk_kernel)
   begin
     if rising_edge(re.clk_kernel) then
-      if re.reset = '1' or rs.readprob_delay_rst = '1' then
+      if r_control_reset = '1' or rs.readprob_delay_rst = '1' then
         del_r.state      <= X_IDLE;
         del_r.read_delay <= BP_STOP;
       else
@@ -1734,7 +1738,7 @@ begin
   process(re.clk_kernel)
   begin
     if(rising_edge(re.clk_kernel)) then
-      if(re.reset = '1') then
+      if(r_control_reset = '1') then
         read_delay <= BP_IGNORE;
       else
         read_delay      <= read_delay_n;
@@ -1780,7 +1784,7 @@ begin
   process(re.clk_kernel)
   begin
     if(rising_edge(re.clk_kernel)) then
-      if(re.reset = '1') then
+      if(r_control_reset = '1') then
         in_posit <= probabilities_empty;
 
         re.pairhmm_in1.en      <= '0';
@@ -1939,7 +1943,7 @@ begin
   begin
     if rising_edge(re.clk_kernel) then
 
-      if(re.reset = '1') then
+      if(r_control_reset = '1') then
         outfifo_in   <= (others => '0');
         outfifo_wren <= '0';
       else
@@ -1955,7 +1959,7 @@ begin
 
   outfifo : output_fifo
     port map (
-      srst        => re.reset,
+      srst        => r_control_reset,
       wr_clk      => re.clk_kernel,
       rd_clk      => clk,
       din         => re.outfifo.din,
@@ -2268,7 +2272,7 @@ begin
   scheduler_reg : process(re.clk_kernel)
   begin
     if rising_edge(re.clk_kernel) then
-      if re.reset = '1' then
+      if r_control_reset = '1' then
         rs.state                 <= SCHED_IDLE;
         rs.pe_first              <= pe_in_empty;
         rs.schedule              <= (others => '0');
@@ -2312,7 +2316,7 @@ begin
         scorecnt <= scorecnt + 1;
       end if;
 
-      if re.reset = '1' then
+      if r_control_reset = '1' then
         scorecnt <= 0;
       end if;
     end if;
@@ -2321,7 +2325,7 @@ begin
   debug_reg_hiclock : process(clk)
   begin
     if rising_edge(clk) then
-      if reset = '1' then
+      if r_control_reset = '1' then
         r_debug(0)(4 downto 3) <= "00";
       else
         if (r.state = LOAD_REQUEST_DATA or r.state = LOAD_LOADX_LOADY) and re.readprobfifo.c.wr_rst_busy = '1' then
@@ -2340,7 +2344,7 @@ begin
     variable resacc_i_cnt : integer range 0 to 63 := 0;
   begin
     if rising_edge(re.clk_kernel) then
-      if re.reset = '1' then
+      if r_control_reset = '1' then
         r_debug      <= (others => (others => '0'));
         resacc_m_cnt := 0;
         resacc_i_cnt := 0;
