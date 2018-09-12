@@ -1,10 +1,13 @@
-# (c) Copyright 2012-2018 Xilinx, Inc. All rights reserved.
-#
+
+# file: clk_div.xdc
+# 
+# (c) Copyright 2008 - 2013 Xilinx, Inc. All rights reserved.
+# 
 # This file contains confidential and proprietary information
 # of Xilinx, Inc. and is protected under U.S. and
 # international copyright and other intellectual property
 # laws.
-#
+# 
 # DISCLAIMER
 # This disclaimer is not a license and does not grant any
 # rights to the materials distributed herewith. Except as
@@ -26,7 +29,7 @@
 # by a third party) even if such damage or loss was
 # reasonably foreseeable or Xilinx had been advised of the
 # possibility of the same.
-#
+# 
 # CRITICAL APPLICATIONS
 # Xilinx products are not designed or intended to be fail-
 # safe, or for use in any application requiring fail-safe
@@ -40,16 +43,17 @@
 # liability of any use of Xilinx products in Critical
 # Applications, subject only to applicable laws and
 # regulations governing limitations on product liability.
-#
+# 
 # THIS COPYRIGHT NOTICE AND DISCLAIMER MUST BE RETAINED AS
 # PART OF THIS FILE AT ALL TIMES.
-#
-# DO NOT MODIFY THIS FILE.
-# #########################################################
-#
-# This XDC is used only in OOC mode for synthesis, implementation
-#
-# #########################################################
+# 
+
+# Input clock periods. These duplicate the values entered for the
+# input clocks. You can use these to time your system. If required
+# commented constraints can be used in the top level xdc 
+#----------------------------------------------------------------
+# Connect to input port when clock capable pin is selected for input
+create_clock -period 4.000 [get_ports clk_in1]
+set_input_jitter [get_clocks -of_objects [get_ports clk_in1]] 0.04
 
 
-create_clock -period 8 -name clk [get_ports clk]

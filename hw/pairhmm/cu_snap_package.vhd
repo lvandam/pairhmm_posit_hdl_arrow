@@ -254,12 +254,12 @@ package cu_snap_package is
    );
   end component;
 
-  -- component psl_to_kernel is
-  --   port (
-  --     clk_psl    : in  std_logic;
-  --     clk_kernel : out std_logic
-  --     );
-  -- end component;
+  component psl_to_kernel is
+    port (
+      clk_psl    : in  std_logic;
+      clk_kernel : out std_logic
+      );
+  end component;
   --
   -- component xd_pulse_xfer is
   --   generic (
@@ -297,7 +297,7 @@ package body cu_snap_package is
     r.prob_data <= (others => '0');
     r.hapl_data <= (others => '0');
 
-    r.initial <= (others => '0');
+    -- r.initial <= (others => '0');
 
     r.filled <= '0';
   end procedure cu_reset;

@@ -1,4 +1,4 @@
----------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------
 --    _____      _      _    _ __  __ __  __
 --   |  __ \    (_)    | |  | |  \/  |  \/  |
 --   | |__) |_ _ _ _ __| |__| | \  / | \  / |
@@ -370,10 +370,10 @@ package pe_package is
     );
 
   type step_add_raw_type is record
-    albetl   : value_prod_sum;
-    albegatl : value_prod_sum_sum;
-    deept    : value_prod_sum;
-    zeett    : value_prod_sum;
+    albetl   : value_sum;
+    albegatl : value_sum;
+    deept    : value_sum;
+    zeett    : value_sum;
 
     tmis : transmissions_raw;
     emis : emissions_raw;
@@ -381,17 +381,17 @@ package pe_package is
   end record;
 
   constant step_add_raw_empty : step_add_raw_type := (
-    albetl   => value_prod_sum_empty,
-    albegatl => value_prod_sum_sum_empty,
-    deept    => value_prod_sum_empty,
-    zeett    => value_prod_sum_empty,
+    albetl   => value_sum_empty,
+    albegatl => value_sum_empty,
+    deept    => value_sum_empty,
+    zeett    => value_sum_empty,
     tmis     => tmis_raw_empty,
     emis     => emis_raw_empty,
     mids     => mids_raw_empty
     );
 
   type step_emult_raw_type is record
-    m : value_product_prod_sum_sum;
+    m : value_product;
     i : value_product;
     d : value_product;
 
@@ -401,7 +401,7 @@ package pe_package is
   end record;
 
   constant step_emult_raw_empty : step_emult_raw_type := (
-    m    => value_product_prod_sum_sum_empty,
+    m    => value_product_empty,
     i    => value_product_empty,
     d    => value_product_empty,
     tmis => tmis_raw_empty,
@@ -430,6 +430,10 @@ package pe_package is
     en      : std_logic;
     valid   : std_logic;
     cell    : pe_cell_type;
+    -- initial : std_logic_vector(31 downto 0);
+    -- tmis    : transmissions;
+    -- emis    : emissions;
+    -- mids    : matchindels;
     initial : value;
     tmis    : transmissions_raw;
     emis    : emissions_raw;
@@ -446,6 +450,10 @@ package pe_package is
     mids    => mids_raw_empty,
     tmis    => tmis_raw_empty,
     emis    => emis_raw_empty,
+    -- initial => (others => '0'),
+    -- mids    => mids_empty,
+    -- tmis    => tmis_empty,
+    -- emis    => emis_empty,
     x       => BP_IGNORE,
     y       => BP_IGNORE
     );
@@ -458,20 +466,29 @@ package pe_package is
     tmis    : transmissions_raw;
     emis    : emissions_raw;
     mids    : matchindels_raw;
+    -- initial : std_logic_vector(31 downto 0);
+    -- tmis    : transmissions;
+    -- emis    : emissions;
+    -- mids    : matchindels;
     x       : bp_type;
     y       : bp_type;
   end record;
+
+    constant prob_zero : prob := X"00000000";
+    constant prob_one : prob := X"40000000";
 
   type initial_array_pe is array (0 to PE_CYCLES-1) of prob;
   type initial_array_pe_raw is array (0 to PE_CYCLES-1) of value;
   type emissions_array is array (0 to PE_CYCLES-1) of emissions;
   type transmissions_array is array (0 to PE_CYCLES-1) of transmissions;
+  type mids_array is array (0 to PE_CYCLES-1) of matchindels;
   type valid_array is array (0 to PE_CYCLES-1) of std_logic;
   type cell_array is array (0 to PE_CYCLES-1) of pe_cell_type;
 
   type emissions_raw_array is array (0 to PE_CYCLES-1) of emissions_raw;
   type transmissions_raw_array is array (0 to PE_CYCLES-1) of transmissions_raw;
   type mids_raw_array is array (0 to PE_CYCLES-1) of matchindels_raw;
+
 
   function prod2val (a       : in value_product) return value;
   function sum2val (a        : in value_sum) return value;

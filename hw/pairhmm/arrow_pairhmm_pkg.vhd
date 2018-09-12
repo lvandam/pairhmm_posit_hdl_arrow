@@ -369,9 +369,9 @@ package arrow_pairhmm_pkg is
     port (
       cr : in  cr_in;
       i  : in  pairhmm_in;
-      o  : out pairhmm_out;
-      resaccm : out std_logic_vector(31 downto 0);
-      resacci : out std_logic_vector(31 downto 0)
+      o  : out pairhmm_out--;
+      -- resaccm : out std_logic_vector(31 downto 0);
+      -- resacci : out std_logic_vector(31 downto 0)
       );
   end component;
 
