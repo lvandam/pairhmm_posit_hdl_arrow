@@ -1,20 +1,15 @@
 #!/bin/bash
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
-for p in 32 #16 32
+for p in 16 32
 do
-    for i in 10 #1 5 10
+    for i in 1 5 10
     do
         $DIR/build/pairhmm $p 8 8 $i
-        rm top.wdb
         $DIR/build/pairhmm $p 16 16 $i
-        rm top.wdb
         $DIR/build/pairhmm $p 24 24 $i
-        rm top.wdb
         $DIR/build/pairhmm $p 32 32 $i
-        rm top.wdb
         $DIR/build/pairhmm $p 40 40 $i
-        rm top.wdb
 
         $DIR/build/pairhmm $p 8 16 $i
 
