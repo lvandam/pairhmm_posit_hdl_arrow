@@ -1,20 +1,7 @@
 # Pair-HMM accelerator using CAPI SNAP & Apache Arrow
+This repository consists of a hardware design for accelerating the pair-HMM forward algorithm using the posit number format.
 
-## Configuration
-### Submodules
-`git submodule update --init`
-
-# Posit Arithmetic Accelerator on FPGA (Apache Arrow, CAPI SNAP)
-This repository consists of a hardware design for accelerating vector arithmetic operations for the posit number format.
-
-Both the hardware description of the accelerator as well as a C++ software library is provided. The library can be used in order to easily pass vectors to the FPGA and perform the selected operation on it.
-
-Currently, the following vector operations are supported:
-* Vector aggregation (vector dot product, vector sum)
-* Vector (scalar) addition
-* Vector (scalar) subtraction
-* Vector (scalar) multiplication
-
+Both the hardware description of the accelerator as well as a C++ software test case is provided. 
 
 ## Requirements
 ### Clone the repository & Initialize submodules
