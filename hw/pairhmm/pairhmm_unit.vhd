@@ -1451,13 +1451,13 @@ begin
 
       when SHIFT =>
         shift_v.state := SHIFT;
-        -- if rs.shift_readprob_buffer = '1' and re.readprobfifo.c.empty = '0' then
-        --   shift_v.rd_en := '1';
-        --   shift_v.state := SHIFT_NEW;
-        -- end if;
-        if rs.shift_readprob_buffer = '1' then
-          shift_v.state := SHIFT_EMPTY;
+        if rs.shift_readprob_buffer = '1' and re.readprobfifo.c.empty = '0' then
+          shift_v.rd_en := '1';
+          shift_v.state := SHIFT_NEW;
         end if;
+        -- if rs.shift_readprob_buffer = '1' then
+        --   shift_v.state := SHIFT_EMPTY;
+        -- end if;
 
         -- Determine read enable
         if re.readprobfifo.c.empty = '0' and re.readprobfifo.c.rd_rst_busy = '0' then
@@ -1549,13 +1549,13 @@ begin
 
       when SHIFT =>
         shift_v.state := SHIFT;
-        -- if rs.shift_hapl_buffer = '1' and re.haplfifo.c.empty = '0' then
-        --   shift_v.rd_en := '1';
-        --   shift_v.state := SHIFT_NEW;
-        -- end if;
-        if rs.shift_hapl_buffer = '1' then
-          shift_v.state := SHIFT_EMPTY;
+        if rs.shift_hapl_buffer = '1' and re.haplfifo.c.empty = '0' then
+          shift_v.rd_en := '1';
+          shift_v.state := SHIFT_NEW;
         end if;
+        -- if rs.shift_hapl_buffer = '1' then
+        --   shift_v.state := SHIFT_EMPTY;
+        -- end if;
 
         -- Determine read enable
         if(re.haplfifo.c.empty = '0' and re.haplfifo.c.rd_rst_busy = '0') then
@@ -1737,12 +1737,15 @@ begin
       when X_STOP =>
         del_v.read_delay := BP_STOP;
         del_v.state      := X_STOP;
+        if rs.readprob_delay_rst = '1' then
+            del_v.state      := X_IDLE;
+        end if;
     end case;
 
     del_d <= del_v;
   end process;
 
-  re.pairhmm.i.x         <= del_r.read_delay;  -- TODO Laurens: put back after fix:  when rs.feedback_rd_en2 = '0' else rs.pe_first.x
+  re.pairhmm.i.x         <= del_r.read_delay when rs.feedback_rd_en2 = '0' else rs.pe_first.x;
 
   -- Schedule
   re.pairhmm.i.schedule <= rs.core_schedule2;
@@ -2095,11 +2098,11 @@ begin
     vs.shift_hapl_buffer     := '0';
 
     -- Select the proper input, also correct for latency of 1 of the hapl and read RAMs:
-    -- if rs.feedback_rd_en1 = '0' then -- TODO Laurens: put back after working design (after working X=16, Y=16)
-    vs.pe_first := re.pairhmm_in1;
-    -- else
-    -- vs.pe_first := re.fbpairhmm;
-    -- end if;
+    if rs.feedback_rd_en1 = '0' then -- TODO Laurens: put back after working design (after working X=16, Y=16)
+        vs.pe_first := re.pairhmm_in1;
+    else
+        vs.pe_first := re.fbpairhmm;
+    end if;
 
     -- Control signals that also need a latency of 1 for this reason:
     vs.ybus_addr1      := rs.ybus_addr;
@@ -2247,7 +2250,7 @@ begin
           -- If we are at the last base of the read
           if rs.basepair = rs.sizex - 2 then
             vs.cell     := PE_BOTTOM;            -- Assert the "bottom" signal
-            if rs.sizey <= PAIRHMM_NUM_PES then  -- TODO should be leny?
+            if rs.sizey <= PAIRHMM_NUM_PES then
               vs.cell := PE_LAST;                -- Assert the "last" signal
             end if;
           end if;
@@ -2511,7 +2514,7 @@ begin
   --
   --
   --       if re.pairhmm.i.ybus.wren = '1' and re.pairhmm.i.ybus.addr = 3 then
-  --         r_debug(6)(31 downto 0) <= y_data_vec(47 downto 16);  -- TODO Laurens check this before submit/before build
+  --         r_debug(6)(31 downto 0) <= y_data_vec(47 downto 16);
   --       end if;
   --       if re.pairhmm.i.ybus.wren = '1' and re.pairhmm.i.ybus.addr = 4 then
   --         r_debug(7)(31 downto 0) <= y_data_vec(47 downto 16);
@@ -2520,10 +2523,10 @@ begin
   --         r_debug(8)(31 downto 0) <= y_data_vec(47 downto 16);
   --       end if;
   --       if re.pairhmm.i.ybus.wren = '1' and re.pairhmm.i.ybus.addr = 6 then
-  --         r_debug(9)(31 downto 0) <= y_data_vec(47 downto 16);  -- TODO Laurens check this before submit/before build
+  --         r_debug(9)(31 downto 0) <= y_data_vec(47 downto 16);
   --       end if;
   --       if re.pairhmm.i.ybus.wren = '1' and re.pairhmm.i.ybus.addr = 7 then
-  --         r_debug(10)(31 downto 0) <= y_data_vec(47 downto 16);  -- TODO Laurens check this before submit/before build
+  --         r_debug(10)(31 downto 0) <= y_data_vec(47 downto 16);
   --       end if;
   --       if re.pairhmm.i.ybus.wren = '1' and re.pairhmm.i.ybus.addr = 8 then
   --         r_debug(11)(31 downto 0) <= y_data_vec(47 downto 16);
