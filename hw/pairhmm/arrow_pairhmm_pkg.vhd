@@ -285,24 +285,6 @@ package arrow_pairhmm_pkg is
       -- Batch offset (to fetch from Arrow)
       batch_offset : in std_logic_vector(REG_WIDTH-1 downto 0);
 
-      -- Debug
-      debug0 : out std_logic_vector(REG_WIDTH-1 downto 0);
-      debug1 : out std_logic_vector(REG_WIDTH-1 downto 0);
-      debug2 : out std_logic_vector(REG_WIDTH-1 downto 0);
-      debug3 : out std_logic_vector(REG_WIDTH-1 downto 0);
-      debug4 : out std_logic_vector(REG_WIDTH-1 downto 0);
-      debug5 : out std_logic_vector(REG_WIDTH-1 downto 0);
-      debug6 : out std_logic_vector(REG_WIDTH-1 downto 0);
-      debug7 : out std_logic_vector(REG_WIDTH-1 downto 0);
-      debug8 : out std_logic_vector(REG_WIDTH-1 downto 0);
-      debug9 : out std_logic_vector(REG_WIDTH-1 downto 0);
-      debug10 : out std_logic_vector(REG_WIDTH-1 downto 0);
-      debug11 : out std_logic_vector(REG_WIDTH-1 downto 0);
-      debug12 : out std_logic_vector(REG_WIDTH-1 downto 0);
-      debug13 : out std_logic_vector(REG_WIDTH-1 downto 0);
-      debug14 : out std_logic_vector(REG_WIDTH-1 downto 0);
-      debug15 : out std_logic_vector(REG_WIDTH-1 downto 0);
-
       -- Batch information
       batches    : in std_logic_vector(REG_WIDTH-1 downto 0);
       x_len      : in std_logic_vector(REG_WIDTH-1 downto 0);
@@ -369,9 +351,9 @@ package arrow_pairhmm_pkg is
     port (
       cr : in  cr_in;
       i  : in  pairhmm_in;
-      o  : out pairhmm_out--;
-      -- resaccm : out std_logic_vector(31 downto 0);
-      -- resacci : out std_logic_vector(31 downto 0)
+      o  : out pairhmm_out              --;
+     -- resaccm : out std_logic_vector(31 downto 0);
+     -- resacci : out std_logic_vector(31 downto 0)
       );
   end component;
 
@@ -394,42 +376,42 @@ package arrow_pairhmm_pkg is
 
   component feedback_fifo_es3
     port (
-      clk       : in  std_logic;
-      srst      : in  std_logic;
-      din       : in  std_logic_vector(458 downto 0);
-      wr_en     : in  std_logic;
-      rd_en     : in  std_logic;
-      dout      : out std_logic_vector(458 downto 0);
-      full      : out std_logic;
-      wr_ack    : out std_logic;
-      overflow  : out std_logic;
-      empty     : out std_logic;
-      valid     : out std_logic;
-      underflow : out std_logic;
+      clk         : in  std_logic;
+      srst        : in  std_logic;
+      din         : in  std_logic_vector(458 downto 0);
+      wr_en       : in  std_logic;
+      rd_en       : in  std_logic;
+      dout        : out std_logic_vector(458 downto 0);
+      full        : out std_logic;
+      wr_ack      : out std_logic;
+      overflow    : out std_logic;
+      empty       : out std_logic;
+      valid       : out std_logic;
+      underflow   : out std_logic;
       wr_rst_busy : out std_logic;
       rd_rst_busy : out std_logic
       );
   end component;
 
-  COMPONENT output_fifo
-    PORT (
-      srst : IN STD_LOGIC;
-      wr_clk : IN STD_LOGIC;
-      rd_clk : IN STD_LOGIC;
-      din : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
-      wr_en : IN STD_LOGIC;
-      rd_en : IN STD_LOGIC;
-      dout : OUT STD_LOGIC_VECTOR(31 DOWNTO 0);
-      full : OUT STD_LOGIC;
-      wr_ack : OUT STD_LOGIC;
-      overflow : OUT STD_LOGIC;
-      empty : OUT STD_LOGIC;
-      valid : OUT STD_LOGIC;
-      underflow : OUT STD_LOGIC;
-      wr_rst_busy : OUT STD_LOGIC;
-      rd_rst_busy : OUT STD_LOGIC
-    );
-  END COMPONENT;
+  component output_fifo
+    port (
+      srst        : in  std_logic;
+      wr_clk      : in  std_logic;
+      rd_clk      : in  std_logic;
+      din         : in  std_logic_vector(31 downto 0);
+      wr_en       : in  std_logic;
+      rd_en       : in  std_logic;
+      dout        : out std_logic_vector(31 downto 0);
+      full        : out std_logic;
+      wr_ack      : out std_logic;
+      overflow    : out std_logic;
+      empty       : out std_logic;
+      valid       : out std_logic;
+      underflow   : out std_logic;
+      wr_rst_busy : out std_logic;
+      rd_rst_busy : out std_logic
+      );
+  end component;
 
   component base_fifo is
     port (

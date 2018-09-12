@@ -110,17 +110,8 @@ int main(int argc, char ** argv)
         std::string x_string = randomBasepairs(workload->batches * (px(x, y) + x - 1));
         std::string y_string = randomBasepairs(workload->batches * (py(y) + y - 1));
 
-        // cout << "X_FULL = " << x_string << endl;
-        // cout << "Y_FULL = " << y_string << endl;
-
         for (int q = 0; q < workload->batches; q++) {
                 fill_batch(batches[q], x_string, y_string, q, workload->bx[q], workload->by[q], powf(2.0, initial_constant_power)); // HW unit starts with last batch
-                // print_batch_info(batches[q]);
-
-                // cout << "BATCH " << q << endl;
-                // cout << "X = " << x_string.substr(q * (px(x, y) + x - 1), (q + 1) * (px(x, y) + x - 1)) << endl;
-                // cout << "Y = " << y_string.substr(q * (py(y) + y - 1), (q + 1) * (py(y) + y - 1)) << endl;
-                // cout << endl;
         }
         stop = omp_get_wtime();
         t_fill_batch = stop - start;
@@ -225,8 +216,8 @@ int main(int argc, char ** argv)
         batch_offsets.resize(roundToMultiple(CORES, 2));
         int batch_counter = 0;
         for(int i = 0; i < roundToMultiple(CORES, 2); i++) {
-            batch_offsets[i] = batch_counter;
-            batch_counter = batch_counter + batch_length[i];
+                batch_offsets[i] = batch_counter;
+                batch_counter = batch_counter + batch_length[i];
         }
         uc.set_batch_offsets(batch_offsets);
 
@@ -235,26 +226,22 @@ int main(int argc, char ** argv)
         start = omp_get_wtime();
         uc.start();
 
-// #ifdef DEBUG
-//         uc.wait_for_finish(1000000);
-// #else
         uc.wait_for_finish();
-// #endif
 
         // Wait for last result of last SA core
         do {
-            // for(int i = 0; i < CORES; i++) {
-            //         cout << "==================================" << endl;
-            //         cout << "== CORE " << i << endl;
-            //         cout << "==================================" << endl;
-            //         for(int j = 0; j < batch_length[i] * PIPE_DEPTH; j++) {
-            //                 cout << dec << j <<": " << hex << result_hw[i][j] << dec <<endl;
-            //         }
-            //         cout << "==================================" << endl;
-            //         cout << endl;
-            // }
+                // for(int i = 0; i < CORES; i++) {
+                //         cout << "==================================" << endl;
+                //         cout << "== CORE " << i << endl;
+                //         cout << "==================================" << endl;
+                //         for(int j = 0; j < batch_length[i] * PIPE_DEPTH; j++) {
+                //                 cout << dec << j <<": " << hex << result_hw[i][j] << dec <<endl;
+                //         }
+                //         cout << "==================================" << endl;
+                //         cout << endl;
+                // }
 
-            usleep(1);
+                usleep(1);
         }
         while ((result_hw[CORES - 1][batch_length[CORES - 1] * PIPE_DEPTH - 1] == 0xDEADBEEF));
         stop = omp_get_wtime();
@@ -270,21 +257,6 @@ int main(int argc, char ** argv)
                 cout << "==================================" << endl;
                 cout << endl;
         }
-
-        // Get debug registers
-        cout << "DEBUG REGISTERS CONTENTS:" << endl;
-        for(int i = 0; i < 8; i++) {
-            uint32_t debug0, debug1;
-            addr_lohi val;
-            platform->read_mmio(REG_DEBUG + i, &val.full);
-
-            debug0 = val.half.hi;
-            debug1 = val.half.lo;
-
-            cout << dec << i*2   << ": " << hex << debug0 << endl;
-            cout << dec << i*2+1 << ": " << hex << debug1 << endl;
-        }
-        cout << endl;
 
         // Check for errors with SW calculation
         if (calculate_sw) {
@@ -304,7 +276,7 @@ int main(int argc, char ** argv)
                 cout << "Writing benchmark file..." << endl;
                 writeBenchmark(pairhmm_dec50, pairhmm_float, pairhmm_posit, hw_debug_values,
                                "pairhmm_es" + std::to_string(ES) + "_" + std::to_string(CORES) + "core_" + std::to_string(pairs) + "_" + std::to_string(x) + "_" + std::to_string(y) + "_" + std::to_string(initial_constant_power) + ".txt",
-                                false, true);
+                               false, true);
 
                 DEBUG_PRINT("Checking errors...\n");
                 int errs_posit = 0;

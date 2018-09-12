@@ -106,9 +106,7 @@ package cu_snap_package is
     p_reads : unsigned(15 downto 0);
 
     readprob_wren : std_logic;
-    hapl_wren : std_logic;
-    -- read_wren : std_logic_vector(0 downto 0);
-    -- prob_wren : std_logic;
+    hapl_wren     : std_logic;
 
     hapl_data : std_logic_vector(7 downto 0);
     read_data : std_logic_vector(7 downto 0);
@@ -129,12 +127,12 @@ package cu_snap_package is
   type cu_sched is record
     pairhmm_rst : std_logic;            -- Reset
 
-    state               : cu_sched_state;  -- State of the scheduler process
-    cycle, cycle1       : unsigned(CU_CYCLE_BITS - 1 downto 0);  -- This must be able to hold up to PAIRHMM_MAX_SIZE / PE_DEPTH * 2 * PAIRHMM_MAX_SIZE-1
+    state                          : cu_sched_state;  -- State of the scheduler process
+    cycle, cycle1                  : unsigned(CU_CYCLE_BITS - 1 downto 0);  -- This must be able to hold up to PAIRHMM_MAX_SIZE / PE_DEPTH * 2 * PAIRHMM_MAX_SIZE-1
     basepair, basepair1, basepair2 : unsigned(log2e(PAIRHMM_MAX_SIZE) downto 0);  -- This must be able to hold up to PAIRHMM_MAX_SIZE-1 but is 1 larger to compare to size array values
-    element             : unsigned(log2e(PAIRHMM_NUM_PES) downto 0);  -- This must be able to hold PAIRHMM_NUM_PES-1
-    schedule, schedule1 : unsigned(PE_DEPTH_BITS - 1 downto 0);  -- To hold the pair that is currently scheduled
-    supercolumn         : unsigned(log2e(PAIRHMM_MAX_SIZE / PAIRHMM_NUM_PES) downto 0);  -- To keep track in which group of columns we are
+    element                        : unsigned(log2e(PAIRHMM_NUM_PES) downto 0);  -- This must be able to hold PAIRHMM_NUM_PES-1
+    schedule, schedule1            : unsigned(PE_DEPTH_BITS - 1 downto 0);  -- To hold the pair that is currently scheduled
+    supercolumn                    : unsigned(log2e(PAIRHMM_MAX_SIZE / PAIRHMM_NUM_PES) downto 0);  -- To keep track in which group of columns we are
 
     valid, valid1 : std_logic;          -- Valid bit for the PairHMM core
     cell, cell1   : pe_cell_type;  -- State of the cell for this bunch of data
@@ -158,66 +156,57 @@ package cu_snap_package is
 
     core_schedule, core_schedule1, core_schedule2 : unsigned(PE_DEPTH_BITS-1 downto 0);
 
-    -- shift_read_buffer : std_logic;
-    -- shift_prob_buffer : std_logic;
     shift_readprob_buffer : std_logic;
-    shift_hapl_buffer : std_logic;
+    shift_hapl_buffer     : std_logic;
 
-    haplfifo_reset : std_logic;
-
-    -- read_delay_rst : std_logic;
-    -- prob_delay_rst : std_logic;
+    haplfifo_reset     : std_logic;
     readprob_delay_rst : std_logic;
-    hapl_delay_rst : std_logic;
+    hapl_delay_rst     : std_logic;
   end record;
 
   constant cu_sched_empty : cu_sched := (
-    state             => SCHED_IDLE,
-    cycle             => (others => '0'),
-    cycle1            => (others => '0'),
-    basepair          => (others => '0'),
-    basepair1         => (others => '0'),
-    basepair2         => (others => '0'),
-    element           => (others => '0'),
-    schedule          => (others => '0'),
-    schedule1         => (others => '0'),
-    supercolumn       => (others => '0'),
-    valid             => '0',
-    valid1            => '0',
-    cell              => PE_NORMAL,
-    cell1             => PE_NORMAL,
-    pairhmm_rst       => '1',
-    feedback_rd_en    => '0',
-    feedback_rd_en1   => '0',
-    feedback_rd_en2   => '0',
-    feedback_wr_en    => '0',
-    feedback_rst      => '1',
-    leny              => (others => '0'),
-    leny_init         => (others => '0'),
-    sizey             => (others => '0'),
-    lenx              => (others => '0'),
-    sizex             => (others => '0'),
-    sizexp            => (others => '0'),
-    startflag         => '1',
-    pe_first          => pe_in_empty,
-    ybus_addr         => (others => '0'),
-    ybus_addr1        => (others => '0'),
-    ybus_addr2        => (others => '0'),
-    ybus_en           => '0',
-    ybus_en1          => '0',
-    ybus_en2          => '0',
-    core_schedule     => (others => '0'),
-    core_schedule1    => (others => '0'),
-    core_schedule2    => (others => '0'),
-    -- shift_read_buffer => '0',
-    -- shift_prob_buffer => '0',
+    state                 => SCHED_IDLE,
+    cycle                 => (others => '0'),
+    cycle1                => (others => '0'),
+    basepair              => (others => '0'),
+    basepair1             => (others => '0'),
+    basepair2             => (others => '0'),
+    element               => (others => '0'),
+    schedule              => (others => '0'),
+    schedule1             => (others => '0'),
+    supercolumn           => (others => '0'),
+    valid                 => '0',
+    valid1                => '0',
+    cell                  => PE_NORMAL,
+    cell1                 => PE_NORMAL,
+    pairhmm_rst           => '1',
+    feedback_rd_en        => '0',
+    feedback_rd_en1       => '0',
+    feedback_rd_en2       => '0',
+    feedback_wr_en        => '0',
+    feedback_rst          => '1',
+    leny                  => (others => '0'),
+    leny_init             => (others => '0'),
+    sizey                 => (others => '0'),
+    lenx                  => (others => '0'),
+    sizex                 => (others => '0'),
+    sizexp                => (others => '0'),
+    startflag             => '1',
+    pe_first              => pe_in_empty,
+    ybus_addr             => (others => '0'),
+    ybus_addr1            => (others => '0'),
+    ybus_addr2            => (others => '0'),
+    ybus_en               => '0',
+    ybus_en1              => '0',
+    ybus_en2              => '0',
+    core_schedule         => (others => '0'),
+    core_schedule1        => (others => '0'),
+    core_schedule2        => (others => '0'),
     shift_readprob_buffer => '0',
-    shift_hapl_buffer => '0',
-    haplfifo_reset    => '0',
-    -- read_delay_rst    => '0',
-    -- prob_delay_rst    => '0',
+    shift_hapl_buffer     => '0',
+    haplfifo_reset        => '0',
     readprob_delay_rst    => '0',
-    hapl_delay_rst    => '0'
+    hapl_delay_rst        => '0'
     );
 
   constant CYCLE_ZERO : unsigned(CU_CYCLE_BITS-1 downto 0) := usign(0, CU_CYCLE_BITS);
@@ -231,10 +220,8 @@ package cu_snap_package is
     outfifo                 : outfifo_item;
     fbfifo                  : fbfifo_item;
 
-    haplfifo : basefifo_item;
+    haplfifo     : basefifo_item;
     readprobfifo : baseprobfifo_item;
-    -- readfifo : basefifo_item;
-    -- probfifo : probfifo_item;
 
     fbpairhmm, fbpairhmm1 : pe_in;
     clk_kernel            : std_logic;
@@ -246,35 +233,13 @@ package cu_snap_package is
   function slvec (a : in unsigned) return std_logic_vector;
 
   component clk_div
-  port
-   (-- Clock in ports
-    -- Clock out ports
-    clk_out1          : out    std_logic;
-    clk_in1           : in     std_logic
-   );
+    port
+      (                                 -- Clock in ports
+        -- Clock out ports
+        clk_out1 : out std_logic;
+        clk_in1  : in  std_logic
+        );
   end component;
-
-  component psl_to_kernel is
-    port (
-      clk_psl    : in  std_logic;
-      clk_kernel : out std_logic
-      );
-  end component;
-  --
-  -- component xd_pulse_xfer is
-  --   generic (
-  --     ACTIVE_RESET     : std_logic := '1';   -- active level of reset input
-  --     ACTIVE_IN        : std_logic := '1';   -- active level of input pulse
-  --     ACTIVE_OUT       : std_logic := '1'    -- active level of output pulse
-  --   );
-  --   port (
-  --     reset            : in  std_logic;
-  --     clk_a            : in  std_logic;
-  --     pulse_in         : in  std_logic;
-  --     clk_b            : in  std_logic;
-  --     pulse_out        : out std_logic
-  --   );
-  -- end component;
 
 end package cu_snap_package;
 
@@ -288,16 +253,12 @@ package body cu_snap_package is
     r.y_reads <= (others => '0');
     r.p_reads <= (others => '0');
 
-    -- r.read_wren <= "0";
-    -- r.prob_wren <= '0';
     r.readprob_wren <= '0';
-    r.hapl_wren <= '0'; --r.hapl_wren <= "0";
+    r.hapl_wren     <= '0';
 
     r.read_data <= (others => '0');
     r.prob_data <= (others => '0');
     r.hapl_data <= (others => '0');
-
-    -- r.initial <= (others => '0');
 
     r.filled <= '0';
   end procedure cu_reset;

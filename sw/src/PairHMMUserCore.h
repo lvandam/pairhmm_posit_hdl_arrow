@@ -44,8 +44,6 @@
 #define REG_XBPP_OFFSET 42
 #define REG_INITIAL_OFFSET 43
 
-#define REG_DEBUG 44
-
 /**
  * \class PairHMMUserCore
  *

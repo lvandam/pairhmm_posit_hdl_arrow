@@ -26,10 +26,10 @@ PairHMMUserCore::PairHMMUserCore(std::shared_ptr<fletcher::FPGAPlatform> platfor
         // Some settings that are different from standard implementation
         // concerning start, reset and status register.
         if(CORES == 1) {
-            ctrl_start       = 0x0000000000000001;// 0x00000000000000FF;
-            ctrl_reset       = 0x0000000000000002;// 0x000000000000FF00;
-            done_status      = 0x0000000000000002;// 0x000000000000FF00;
-            done_status_mask = 0x0000000000000002;// 0x000000000000FFFF;
+            ctrl_start       = 0x0000000000000001;
+            ctrl_reset       = 0x0000000000000002;
+            done_status      = 0x0000000000000002;
+            done_status_mask = 0x0000000000000002;
         } else if(CORES == 2) {
             ctrl_start       = 0x0000000000000003;
             ctrl_reset       = 0x000000000000000C;
@@ -80,7 +80,7 @@ void PairHMMUserCore::set_batch_init(std::vector<uint32_t>& batch_length, std::v
     }
 
     reg_conv_t reg;
-    
+
     reg.half.hi = init[2 * 0].x_padded;
     reg.half.lo = init[2 * 0 + 1].x_padded;
     this->platform()->write_mmio(REG_XP_OFFSET + 0, reg.full);

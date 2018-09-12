@@ -1,0 +1,11 @@
+===================================
+Configuration Memory information
+===================================
+File Format        BIN
+Interface          BPIX16
+Size               128M
+Start Address      0x00000000
+End Address        0x07FFFFFF
+
+Addr1         Addr2         Date                    File(s)
+0x00000000    0x011B9AFB    Sep 12 19:27:28 2018    /home/laurens/open-power-snap/hardware/build/Images/fw_2018_0912_1752_pairhmm_noSDRAM_ADKU3_11.bit
