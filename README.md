@@ -76,6 +76,7 @@ mkdir -p build && cd build
 cmake ..
 make
 ./pairhmm <pairs> <X> <Y> <initial constant>
+```
 
 ## Reference
 This content is developed as part of a research project at the Computer Engineering lab at Delft University of Technology. If any of this is of help to you, please include the following reference in your related work:
